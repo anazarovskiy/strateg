@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from .core import StratError, eprint
@@ -256,6 +257,12 @@ def main(argv=None) -> int:
         return e.code
     except KeyboardInterrupt:
         return 130
+    except BrokenPipeError:  # вывод обрезан (например, | head) — это не ошибка
+        try:
+            sys.stdout = open(os.devnull, "w")
+        except OSError:
+            pass
+        return 0
 
 
 def dispatch(args, ap):

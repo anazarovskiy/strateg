@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import socket
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -227,6 +228,20 @@ def _decode(data: bytes, charset=None) -> str:
     return data.decode("utf-8", errors="replace")
 
 
+def ssl_context():
+    """Контекст TLS: системные сертификаты, а если их нет (Python с python.org на macOS) — certifi, если установлен."""
+    ctx = ssl.create_default_context()
+    paths = ssl.get_default_verify_paths()
+    has_system = (paths.cafile and os.path.exists(paths.cafile)) or (paths.capath and os.path.isdir(paths.capath))
+    if not has_system:
+        try:
+            import certifi  # type: ignore
+            ctx = ssl.create_default_context(cafile=certifi.where())
+        except ImportError:
+            pass
+    return ctx
+
+
 def fetch_url(url: str, timeout=25):
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
@@ -234,7 +249,7 @@ def fetch_url(url: str, timeout=25):
         "Accept-Language": "ru,en;q=0.8",
         "Accept-Encoding": "identity",
     })
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with urllib.request.urlopen(req, timeout=timeout, context=ssl_context()) as r:
         final = r.geturl()
         ctype = r.headers.get_content_type()
         charset = r.headers.get_content_charset()
@@ -267,7 +282,11 @@ def cmd_fetch(args):
                          code=4)
     except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, OSError) as e:
         journal(pr, "tool_error", {"tool": "source fetch", "url": url, "error": str(e)[:200]})
-        raise StratError(f"Не удалось скачать страницу ({short(str(e), 120)}). Запасной путь: WebFetch + "
+        hint = ""
+        if "CERTIFICATE_VERIFY_FAILED" in str(e):
+            hint = (" Python не видит сертификаты: на macOS с Python с python.org запустите «Install Certificates."
+                    "command» из папки Applications/Python 3.x или установите certifi (pip install certifi).")
+        raise StratError(f"Не удалось скачать страницу ({short(str(e), 120)}).{hint} Запасной путь: WebFetch + "
                          f"./strat source note --url {url} ...", code=4)
     ok, why = policy_check_url(final)
     if not ok:

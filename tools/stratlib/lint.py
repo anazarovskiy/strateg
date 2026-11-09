@@ -139,6 +139,7 @@ def lint_file(rel: str, text: str, cmap: dict, smap: dict, strict: bool) -> list
     issues = []
     blocks = parse_blocks(text)
     t0 = today()
+    stale_seen = set()
     for b in blocks:
         ids = refs_in(b["text"])
         kind = section_kind(b["path"])
@@ -154,16 +155,19 @@ def lint_file(rel: str, text: str, cmap: dict, smap: dict, strict: bool) -> list
                     issues.append(_issue("error", "E102", rel, b["line"],
                                          f"{rid} {'отозвано' if st == 'retracted' else 'заменено'}{hint} — "
                                          f"обновите формулировку или основание"))
-                elif st == "disputed":
+                elif st == "disputed" and not set(c.get("disputed_by", [])) & set(ids):
                     issues.append(_issue("warning", "W103", rel, b["line"],
-                                         f"{rid} оспорено ({c.get('status_note', '')}) — оговорите это в тексте"))
+                                         f"{rid} оспорено ({c.get('status_note', '')}) — оговорите это в тексте и "
+                                         f"сошлитесь на запись, которая его оспаривает"))
                 if c.get("type") == "synthetic" and kind not in ("hypotheses", "synthetic"):
                     issues.append(_issue("error", "E104", rel, b["line"],
                                          f"синтетический ответ {rid} в разделе «{path_str(b['path'])}»: модельные "
                                          f"респонденты не доказывают спрос — переносите в гипотезы"))
                 exp = parse_date(c.get("expires"))
-                if exp and exp < t0 and st == "active":
-                    issues.append(_issue("warning", "W109", rel, b["line"], f"{rid} устарело (срок {c['expires']})"))
+                if exp and exp < t0 and st == "active" and rid not in stale_seen:
+                    stale_seen.add(rid)
+                    issues.append(_issue("warning", "W109", rel, b["line"],
+                                         f"{rid} устарело (срок {c['expires']}); дальше в файле не повторяю"))
             elif rid[0] == "S" and rid not in smap:
                 issues.append(_issue("error", "E101", rel, b["line"], f"ссылка на несуществующий источник {rid}"))
         if kind == "facts" and b["kind"] in ("item", "table"):

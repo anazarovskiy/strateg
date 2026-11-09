@@ -33,6 +33,7 @@ p,li{max-width:76ch}a{color:var(--accent)}code{font:13px/1.4 ui-monospace,Menlo,
 padding:1px 4px;border:1px solid var(--line);border-radius:4px}
 table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px;background:var(--card)}
 th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}th{background:var(--bg)}
+td:first-child{white-space:nowrap}
 .meta{color:var(--muted);font-size:14px}.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;
 margin:14px 0;color:var(--muted)}.ref{font:12px/1 ui-monospace,Menlo,monospace;text-decoration:none;
 padding:1px 4px;border-radius:4px;border:1px solid currentColor;white-space:nowrap}
@@ -328,7 +329,7 @@ def build(pr) -> tuple:
     for c in claims_sorted:
         src = ", ".join(f'<a href="#{s}">{s}</a>' for s in c.get("sources", [])) or \
               ("осн.: " + ", ".join(f'<a href="#{b}">{b}</a>' for b in c.get("basis", [])) if c.get("basis") else "—")
-        ver = {True: "найдена", False: "не найдена", None: "—"}[c.get("verified")]
+        ver = {True: "найдена", False: "не найдена", None: "не проверялась"}[c.get("verified")]
         mark = "" if c["id"] in used else ' class="small"'
         quote = (c.get("quote") or "") + (f" ({c['loc']})" if c.get("loc") else "")
         rows.append(f'<tr id="{c["id"]}"{mark}><td>{c["id"]}</td><td class="t-{c["type"]}">'

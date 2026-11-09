@@ -433,6 +433,19 @@ def cmd_doctor(args):
             print(f"✓ {mod:10} установлен — {why}")
         except ImportError:
             print(f"· {mod:10} не установлен — {why}")
+    import ssl
+    vp = ssl.get_default_verify_paths()
+    has_ca = (vp.cafile and os.path.exists(vp.cafile)) or (vp.capath and os.path.isdir(vp.capath))
+    try:
+        import certifi  # type: ignore  # noqa: F401
+        has_certifi = True
+    except ImportError:
+        has_certifi = False
+    if has_ca or has_certifi:
+        print("✓ сертификаты TLS найдены — ./strat source fetch сможет скачивать страницы")
+    else:
+        print("! сертификаты TLS не найдены: на macOS с Python с python.org запустите «Install Certificates.command» "
+              "(Applications/Python 3.x) или pip install certifi; иначе страницы читаются через WebFetch")
     pol = load_config("policy")
     print(f"Политика источников: режим {pol.get('web', {}).get('mode', 'denylist')}, "
           f"запрещённых доменов {len(pol.get('web', {}).get('deny_domains', []))}")
