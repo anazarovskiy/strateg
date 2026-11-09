@@ -1,0 +1,25 @@
+# Секреты и ключи
+.env
+.env.*
+*.pem
+*.key
+
+# Личные настройки Claude Code
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Служебные файлы
+__pycache__/
+*.pyc
+*.lock
+*.tmp[0-9]*
+.DS_Store
+log/hook_errors.log
+log/journal.jsonl
+
+# Временные и машинные файлы проектов
+projects/*/sources/incoming/
+projects/*/sources/_download*
+projects/*/log/statusline.json
+projects/*/log/cost_state.json
+projects/*/log/.last_stop

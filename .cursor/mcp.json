@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "strat": {
+      "command": "python3",
+      "args": ["${workspaceFolder}/tools/strat.py", "mcp"],
+      "env": {
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}

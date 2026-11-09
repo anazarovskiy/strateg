@@ -1,0 +1,69 @@
+{
+  "_about": "Политика источников и бюджета. Агент читает этот файл через ./strat и хуки; правила срабатывают до обращения к сайту.",
+  "budget_usd_default": 15,
+  "budget_ask_threshold_usd": 5,
+  "web": {
+    "mode": "denylist",
+    "_mode_help": "denylist — разрешены все открытые сайты, кроме перечисленных; allowlist — только allow_domains",
+    "allow_domains": [
+      "rosstat.gov.ru",
+      "cbr.ru",
+      "digital.gov.ru",
+      "rkn.gov.ru",
+      "fas.gov.ru",
+      "publication.pravo.gov.ru",
+      "consultant.ru",
+      "garant.ru",
+      "e-disclosure.ru",
+      "megafon.ru",
+      "moskva.megafon.ru",
+      "corp.megafon.ru",
+      "mts.ru",
+      "beeline.ru",
+      "t2.ru",
+      "yota.ru",
+      "rbc.ru",
+      "vedomosti.ru",
+      "kommersant.ru",
+      "tass.ru",
+      "interfax.ru",
+      "cnews.ru",
+      "tadviser.ru",
+      "habr.com",
+      "vc.ru",
+      "hse.ru",
+      "nafi.ru",
+      "wciom.ru",
+      "fom.ru",
+      "apps.apple.com",
+      "play.google.com",
+      "rustore.ru",
+      "wikipedia.org"
+    ],
+    "deny_domains": [
+      "intranet.*",
+      "*.atlassian.net",
+      "confluence.*",
+      "jira.*",
+      "*.sharepoint.com",
+      "sci-hub.*",
+      "libgen.*",
+      "*.onion"
+    ],
+    "deny_url_keywords": [
+      "/wp-admin",
+      "/login",
+      "/signin",
+      "/auth/login",
+      "/oauth/authorize",
+      "token=",
+      "password=",
+      "sessionid="
+    ],
+    "_deny_help": "Запрещены корпоративные системы (вики, трекеры, порталы), пиратские библиотеки и страницы входа: агент работает только с открытыми данными."
+  },
+  "data": {
+    "real_interviews_require_consent": true,
+    "pii_in_repo": false
+  }
+}

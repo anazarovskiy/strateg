@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "strat": {
+      "command": "python3",
+      "args": ["${CLAUDE_PROJECT_DIR:-.}/tools/strat.py", "mcp"],
+      "env": {
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}

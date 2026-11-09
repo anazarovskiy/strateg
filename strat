@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Обёртка для CLI агента «Стратег»: находит Python 3.9+ и запускает tools/strat.py
+DIR=$(cd "$(dirname "$0")" && pwd)
+for PY in python3 python; do
+  if command -v "$PY" >/dev/null 2>&1; then
+    exec "$PY" "$DIR/tools/strat.py" "$@"
+  fi
+done
+echo "Не найден Python 3.9+. Установите Python (macOS: xcode-select --install или brew install python)." >&2
+exit 127
