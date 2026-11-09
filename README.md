@@ -94,7 +94,7 @@ docs/                     архитектура, модели и инструм
 ## Проверка
 
 ```bash
-python3 -m unittest discover -s tests -v   # 12 тестов: реестр, сверка цитат, проверки, хуки, MCP, стоимость, отчёт
+python3 -m unittest discover -s tests -v   # 16 тестов: реестр, сверка цитат и чисел, проверки, хуки, MCP, стоимость, отчёт
 ./strat doctor
 ```
 

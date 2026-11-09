@@ -55,6 +55,23 @@ def _verify_against(pr, claim: dict, smap: dict) -> dict:
     return best
 
 
+def _numbers_check(pr, claim: dict, smap: dict) -> list:
+    """Числа из формулировки, которых нет ни в цитате, ни в снимках источников. Только для записей с источником."""
+    if claim.get("type") not in ("fact", "observation", "estimate") or not claim.get("sources"):
+        return []
+    evidence = [claim.get("quote") or "", claim.get("loc") or ""]
+    has_text = False
+    for sid in claim.get("sources", []):
+        src = smap.get(sid)
+        if src:
+            txt = snapshot_text(pr, src)
+            has_text = has_text or bool(txt.strip())
+            evidence.append(txt)
+    if not has_text:
+        return []
+    return textio.unsupported_numbers(claim.get("text", ""), "\n".join(evidence))
+
+
 def _verified_flag(res: dict):
     return {"exact": True, "close": True, "not_found": False}.get(res["status"])
 
@@ -138,6 +155,11 @@ def cmd_add(args):
         claim["verified"] = None
     if args.note:
         claim["note"] = args.note
+    missing = _numbers_check(pr, claim, smap)
+    if missing:
+        claim["numbers_unsupported"] = missing
+        warnings.append("чисел из формулировки нет в источнике: " + ", ".join(missing) +
+                        " — проверьте цифры и единицы; если это расчёт, оформите его как estimate с --method")
 
     with FileLock(pr.claims_path):
         rows = read_jsonl(pr.claims_path)
@@ -221,7 +243,7 @@ def cmd_verify(args):
     smap = pr.source_map()
     ids = set(split_ids(args.ids)) if args.ids else None
     stats = {"exact": 0, "close": 0, "not_found": 0, "no_text": 0, "no_quote": 0}
-    bad = []
+    bad, numbad = [], []
     with FileLock(pr.claims_path):
         rows = read_jsonl(pr.claims_path)
         for c in rows:
@@ -233,14 +255,25 @@ def cmd_verify(args):
             stats[res["status"]] = stats.get(res["status"], 0) + 1
             c["verified"] = _verified_flag(res) if c.get("quote") else None
             c["verify_score"] = res.get("score")
+            missing = _numbers_check(pr, c, smap)
+            if missing:
+                c["numbers_unsupported"] = missing
+                numbad.append(c)
+            else:
+                c.pop("numbers_unsupported", None)
             if res["status"] == "not_found":
                 bad.append((c, res))
         write_jsonl(pr.claims_path, rows)
-    total = sum(stats.values())
+    total = sum(v for k, v in stats.items() if k != "numbers_unsupported")
     print(f"Проверено записей: {total}. Дословно: {stats['exact']}, близко: {stats['close']}, "
           f"не найдено: {stats['not_found']}, нет снимка: {stats['no_text']}, без цитаты: {stats['no_quote']}.")
     for c, res in bad[:30]:
         print(f"  ✗ {c['id']} «{short(c.get('quote'), 90)}» — ближайшее: «{short(res.get('snippet'), 120)}»")
+    if numbad:
+        print(f"Числа формулировки не найдены в источнике у записей: {len(numbad)}.")
+        for c in numbad[:30]:
+            print(f"  ! {c['id']}: {', '.join(c['numbers_unsupported'])} — «{short(c.get('text'), 90)}»")
+    stats["numbers_unsupported"] = len(numbad)
     journal(pr, "verify", {"stats": stats})
     return 1 if bad and args.strict else 0
 
@@ -325,6 +358,11 @@ def cmd_update(args):
         c["verified"] = _verified_flag(res) if c.get("quote") else None
         c["verify_score"] = res.get("score")
         result.update(res)
+        missing = _numbers_check(pr, c, smap)
+        if missing:
+            c["numbers_unsupported"] = missing
+        else:
+            c.pop("numbers_unsupported", None)
 
     c = _update(pr, cid, fn, "update")
     status = {True: "цитата найдена", False: "цитата НЕ найдена", None: "без проверки цитаты"}[c.get("verified")]

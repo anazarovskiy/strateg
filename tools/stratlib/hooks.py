@@ -163,9 +163,12 @@ def pre_tool(p: dict):
                     break
     elif tool == "Bash":
         cmd = ti.get("command") or ""
-        is_strat = re.match(r"^\s*(\./strat|python3?\s+tools/strat\.py|python3?\s+\S*/tools/strat\.py)\b", cmd)
-        if not is_strat and PROTECTED_NAMES.search(cmd) and re.search(r"(>>?|\btee\b|sed\s+-i|\bperl\s+-i|\bmv\b|"
-                                                                       r"\bcp\b|\brm\b|\btruncate\b)", cmd):
+        prot = PROTECTED_NAMES.pattern
+        writes = (re.search(r">>?\s*['\"]?\S*" + prot, cmd) or  # перенаправление вывода в защищённый файл
+                  (PROTECTED_NAMES.search(cmd) and re.search(r"\btee\b|\bsed\s+-i|\bperl\s+-i|\bmv\b|\brm\b|"
+                                                             r"\btruncate\b", cmd)) or
+                  re.search(r"\bcp\b[^|;&]*\s['\"]?\S*" + prot + r"\S*\s*($|[|;&])", cmd))
+        if writes:
             reason = "Реестры, снимки и журналы проекта меняются только через ./strat, не через оболочку."
     if reason:
         journal(_active(), "guard", {"tool": tool, "reason": reason}, actor="hook")

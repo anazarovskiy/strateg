@@ -3,7 +3,8 @@
 ДАННЫЕ ВЫДУМАНЫ и нужны только для проверки агента: в них заложены известные причины изменения
 удержания, поэтому можно измерить, находит ли их агент. Сид фиксирован — результат воспроизводим.
 
-Запуск: python3 evals/data/make_retention_demo.py  →  evals/data/retention_demo.csv
+Запуск: python3 evals/answers/make_retention_demo.py  →  evals/data/retention_demo.csv
+Скрипт лежит в evals/answers/, потому что его комментарии раскрывают ответы: папку убирают на время прогона.
 Описание заложенных эффектов — в evals/answers/retention_demo.md (агенту при проверке не показывать).
 """
 import csv
@@ -12,7 +13,7 @@ import random
 from pathlib import Path
 
 random.seed(20261109)
-OUT = Path(__file__).with_name("retention_demo.csv")
+OUT = Path(__file__).resolve().parents[1] / "data" / "retention_demo.csv"
 
 START = dt.date(2026, 1, 5)          # понедельник, первая когорта
 WEEKS = 24                           # до середины июня

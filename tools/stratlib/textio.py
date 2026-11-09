@@ -74,7 +74,66 @@ def verify_quote(quote: str, text: str) -> dict:
         snippet = " ".join(tt[max(0, i - 8): i + len(qt) + 8])
     else:
         snippet = _best_window(qt, tt)
-    return {"status": "close" if score >= 0.8 else "not_found", "score": round(score, 2), "snippet": snippet}
+    status = "close" if score >= 0.8 else "not_found"
+    if status == "close" and hits:
+        # «Близкое» совпадение не должно прощать другое число: все числа цитаты обязаны быть в найденном фрагменте
+        i = first[hits[0]]
+        window = set(tt[max(0, i - 8): i + len(qt) + 8])
+        if any(w not in window for w in qt if any(ch.isdigit() for ch in w)):
+            status = "not_found"
+    return {"status": status, "score": round(score, 2), "snippet": snippet}
+
+
+_NUM_RE = re.compile(r"(?<![A-Za-zА-Яа-яЁё\d.,])\d+(?:[.,]\d+)?(?![.,]?\d)")
+_DATE_RE = re.compile(r"(?:\d{1,2}\s*[-–]\s*)?\d{1,2}\.\d{1,2}\.(\d{4})")
+
+
+def numbers(text: str) -> set:
+    """Числа из текста в сопоставимом виде: «1 625» → 1625, «2,4» → 2.4."""
+    t = (text or "")
+    for ch in _SPACES:
+        t = t.replace(ch, " ")
+    t = _DATE_RE.sub(r" \1 ", t)  # от дат оставляем год: «18–19.12.2025» → 2025
+    t = re.sub(r"(?<=\d) (?=\d{3}(?!\d))", "", t)
+    out = set()
+    for m in _NUM_RE.findall(t):
+        m = m.replace(",", ".")
+        if "." in m:
+            m = m.rstrip("0").rstrip(".")
+        out.add(m)
+    return out
+
+
+def _rounds_to(source_num: str, claim_num: str) -> bool:
+    """Источник содержит то же число точнее: совпадают первые значащие цифры после округления."""
+    sd = source_num.replace(".", "").lstrip("0")
+    cd = claim_num.replace(".", "").lstrip("0")
+    if len(sd) <= len(cd) or not sd.isdigit() or not cd.isdigit():
+        return False
+    k = len(cd)
+    rounded = (int(sd[:k + 1]) + 5) // 10
+    return str(rounded) == cd
+
+
+def unsupported_numbers(claim_text: str, evidence_text: str) -> list:
+    """Числа утверждения, которых нет в тексте источника (с учётом записи доли как процента и наоборот)."""
+    have = numbers(evidence_text)
+    missing = []
+    for n in sorted(numbers(claim_text), key=lambda x: (len(x), x)):
+        if len(n) < 2 or n in have:
+            continue
+        try:
+            v = float(n)
+        except ValueError:
+            continue
+        alts = {f"{v / 100:.6f}".rstrip("0").rstrip("."), f"{v * 100:.6f}".rstrip("0").rstrip(".")}
+        if alts & have:
+            continue
+        digits = n.replace(".", "").lstrip("0")
+        if len(digits) >= 3 and any(_rounds_to(h, n) for h in have):
+            continue  # округление: «133 тыс.» при 132 718 в источнике
+        missing.append(n)
+    return missing
 
 
 def _best_window(qt, tt) -> str:

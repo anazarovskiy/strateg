@@ -139,7 +139,7 @@ def lint_file(rel: str, text: str, cmap: dict, smap: dict, strict: bool) -> list
     issues = []
     blocks = parse_blocks(text)
     t0 = today()
-    stale_seen = set()
+    stale_seen, num_seen = set(), set()
     for b in blocks:
         ids = refs_in(b["text"])
         kind = section_kind(b["path"])
@@ -163,6 +163,11 @@ def lint_file(rel: str, text: str, cmap: dict, smap: dict, strict: bool) -> list
                     issues.append(_issue("error", "E104", rel, b["line"],
                                          f"синтетический ответ {rid} в разделе «{path_str(b['path'])}»: модельные "
                                          f"респонденты не доказывают спрос — переносите в гипотезы"))
+                if c.get("numbers_unsupported") and rid not in num_seen and st == "active":
+                    num_seen.add(rid)
+                    issues.append(_issue("warning", "W110", rel, b["line"],
+                                         f"у {rid} числа формулировки не найдены в источнике: "
+                                         f"{', '.join(c['numbers_unsupported'])}"))
                 exp = parse_date(c.get("expires"))
                 if exp and exp < t0 and st == "active" and rid not in stale_seen:
                     stale_seen.add(rid)
@@ -170,6 +175,10 @@ def lint_file(rel: str, text: str, cmap: dict, smap: dict, strict: bool) -> list
                                          f"{rid} устарело (срок {c['expires']}); дальше в файле не повторяю"))
             elif rid[0] == "S" and rid not in smap:
                 issues.append(_issue("error", "E101", rel, b["line"], f"ссылка на несуществующий источник {rid}"))
+        if kind == "facts" and b["kind"] == "para" and not ids and len(b["text"]) > 60 and \
+                re.search(r"\d", b["text"]):
+            issues.append(_issue("warning", "W105", rel, b["line"],
+                                 f"в разделе «{path_str(b['path'])}» абзац с числами без ссылки на реестр"))
         if kind == "facts" and b["kind"] in ("item", "table"):
             if b["kind"] == "table" and not ids and _is_header_row(b, blocks):
                 continue
@@ -301,6 +310,14 @@ def lint_project(pr, stage=None, files=None, strict=None) -> list:
     smap = pr.source_map()
     if stage:
         targets = [f for f in STAGE_DOCS.get(stage, []) if (pr.dir / f).exists() or f in REQUIRED]
+        if stage == "report":
+            # в коротких процессах (quick) вариантов и стратегии нет — не требуем их документов
+            from .state import WORKFLOWS
+            wf = WORKFLOWS.get(pr.state().get("workflow"), WORKFLOWS["full"])
+            owner = {"brief.md": "frame", "research/findings.md": "research", "options.md": "options",
+                     "strategy/product.md": "strategy", "strategy/comms.md": "strategy",
+                     "strategy/validation.md": "strategy"}
+            targets = [f for f in targets if owner.get(f) is None or owner[f] in wf or (pr.dir / f).exists()]
         strict = True if strict is None else strict
     else:
         targets = files or project_docs(pr)

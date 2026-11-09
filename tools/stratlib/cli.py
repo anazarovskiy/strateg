@@ -275,6 +275,12 @@ def dispatch(args, ap):
         "log": state.cmd_log, "lint": lint.cmd_lint, "impact": impact.cmd_impact, "search": impact.cmd_search,
         "cost": costs.cmd_cost, "report": report.cmd_report, "pii": data.cmd_pii, "eval": evalcheck.cmd_eval,
     }
+    if c in ("stage", "step", "ask", "answer", "next", "workflow"):
+        # состояние читается и перезаписывается целиком; параллельные субагенты не должны затирать шаги друг друга
+        from .core import FileLock, get_project
+        pr = get_project(getattr(args, "project", None))
+        with FileLock(pr.state_path):
+            return simple[c](args)
     if c in simple:
         return simple[c](args)
     if c == "hook":

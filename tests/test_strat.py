@@ -237,6 +237,54 @@ class StratTest(unittest.TestCase):
         self.assertIn("Приложение А. Реестр утверждений", html)
         self.assertIn('class="ref t-fact"', html)
 
+    def test_13_numbers_guard(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        from stratlib import textio
+        src = ("По данным опроса, 32% абонентов ежедневно получают нежелательные звонки от банков и магазинов "
+               "в рабочее время и по выходным дням тоже, сообщает агентство.")
+        bad = ("По данным опроса 22% абонентов ежедневно получают нежелательные звонки от банков и магазинов "
+               "в рабочее время и по выходным дням тоже сообщает")
+        self.assertEqual(textio.verify_quote(bad, src)["status"], "not_found")  # другое число не проходит как «близко»
+        self.assertEqual(textio.unsupported_numbers("D30 — 22% при 1 250 новых", "android | 1250 | 0.22"), [])
+        self.assertEqual(textio.unsupported_numbers("от 133 до 598 тыс.", "от 132 718 до 598 229"), [])
+        self.assertEqual(textio.unsupported_numbers("удержание 32%", "удержание 22%, 2187 человек"), ["32"])
+        code, out = run(["claim", "add", "--type", "fact", "--source", "S-001", "--text",
+                         "72% абонентов получают спам ежедневно", "--quote",
+                         "62% абонентов ежедневно получают нежелательные звонки"])
+        self.assertEqual(code, 0, out)
+        self.assertIn("чисел из формулировки нет в источнике: 72", out)
+
+    def test_14_bash_guard(self):
+        def decision(cmd):
+            code, out = run(["hook", "pre-tool"], stdin=json.dumps({"tool_name": "Bash", "tool_input": {"command": cmd}}))
+            return "deny" if '"deny"' in out else "allow"
+        self.assertEqual(decision("cat projects/t1/evidence/claims.jsonl 2>/dev/null | head"), "allow")
+        self.assertEqual(decision("./strat status && echo x > projects/t1/state.json"), "deny")
+        self.assertEqual(decision("echo {} >> projects/t1/evidence/claims.jsonl"), "deny")
+        self.assertEqual(decision("./strat claim list > /tmp/out.txt"), "allow")
+
+    def test_15_parallel_steps_and_quick_workflow(self):
+        procs = [subprocess.Popen(STRAT + ["step", f"par.{i}", "start"], stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.DEVNULL, cwd=str(ROOT)) for i in range(8)]
+        for pr in procs:
+            pr.wait()
+        steps = json.loads((self.pdir / "state.json").read_text(encoding="utf-8"))["steps"]
+        self.assertEqual(sum(1 for k in steps if k.startswith("par.")), 8)  # параллельные записи не затирают друг друга
+        run(["init", "Справка", "--slug", "q1", "--workflow", "quick"])
+        code, out = run(["-p", "q1", "lint", "--stage", "report", "--json"])
+        files = {i["file"] for i in json.loads(out)}
+        self.assertFalse(any(f.startswith("strategy/") for f in files), files)  # в быстром процессе стратегия не нужна
+        run(["use", "t1"])
+
+    def test_16_redirect_policy(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        from stratlib import sources
+        from stratlib.core import StratError
+        h = sources._PolicyRedirect()
+        req = __import__("urllib.request").request.Request("https://example.org/a")
+        with self.assertRaises(StratError):
+            h.redirect_request(req, None, 302, "Found", {}, "http://127.0.0.1/admin")
+
 
 if __name__ == "__main__":
     unittest.main()
