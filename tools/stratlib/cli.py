@@ -196,6 +196,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--status", choices=["active", "revised", "reversed", "closed"])
     p.add_argument("--review-by", dest="review_by")
     p.add_argument("--add-basis", dest="add_basis")
+    p.add_argument("--remove-basis", dest="remove_basis", help="убрать основания, на которые решение больше не опирается")
     p.add_argument("--note")
 
     km = sp("commit", "обязательства по решениям").add_subparsers(dest="sub", metavar="действие")

@@ -175,6 +175,11 @@ class StratTest(unittest.TestCase):
         self.assertTrue(any("пересмотра" in x for x in res["now"]))
         self.assertTrue(any("K-001" in x for x in res["now"]))
         self.assertTrue(any("C-002" in x for x in res["changed"]))
+        run(["decision", "update", "D-001", "--remove-basis", "C-002"])
+        code, out = run(["decision", "check", "--json"])
+        self.assertFalse(any("C-002" in x for x in json.loads(out)["changed"]))
+        code, out = run(["decision", "update", "D-001", "--remove-basis", "C-001"])
+        self.assertNotEqual(code, 0)  # последнее основание убрать нельзя
 
     def test_09_costs_from_transcript(self):
         tdir = self.tmp / "tr"

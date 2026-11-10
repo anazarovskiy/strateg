@@ -5,12 +5,13 @@
     "allow": [
       "Bash(./strat *)",
       "Bash(python3 tools/strat.py *)",
-      "Bash(python3 projects/*)",
       "WebSearch",
       "WebFetch",
       "Read",
       "Glob",
-      "Grep"
+      "Grep",
+      "Bash(python3 projects/*/analysis/*.py)",
+      "mcp__strat"
     ],
     "deny": [
       "Read(./.env)",
@@ -27,14 +28,22 @@
     "SessionStart": [
       {
         "hooks": [
-          {"type": "command", "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook session-start", "timeout": 20}
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook session-start",
+            "timeout": 20
+          }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          {"type": "command", "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook user-prompt", "timeout": 10}
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook user-prompt",
+            "timeout": 10
+          }
         ]
       }
     ],
@@ -42,7 +51,11 @@
       {
         "matcher": "WebFetch|Write|Edit|MultiEdit|NotebookEdit|Bash",
         "hooks": [
-          {"type": "command", "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook pre-tool", "timeout": 15}
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook pre-tool",
+            "timeout": 15
+          }
         ]
       }
     ],
@@ -50,7 +63,11 @@
       {
         "matcher": "*",
         "hooks": [
-          {"type": "command", "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook post-tool", "timeout": 15}
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook post-tool",
+            "timeout": 15
+          }
         ]
       }
     ],
@@ -58,14 +75,22 @@
       {
         "matcher": "*",
         "hooks": [
-          {"type": "command", "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook post-tool-failure", "timeout": 15}
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook post-tool-failure",
+            "timeout": 15
+          }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          {"type": "command", "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook stop", "timeout": 60}
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/strat.py\" hook stop",
+            "timeout": 60
+          }
         ]
       }
     ]

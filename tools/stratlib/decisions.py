@@ -65,11 +65,21 @@ def cmd_update(args):
                     d["review_by"] = str(parse_date(args.review_by))
                 if args.add_basis:
                     d["basis"] = sorted(set(d.get("basis", []) + split_ids(args.add_basis)))
+                if args.remove_basis:
+                    drop = set(split_ids(args.remove_basis))
+                    unknown = drop - set(d.get("basis", []))
+                    if unknown:
+                        raise StratError(f"В основаниях {d['id']} нет {', '.join(sorted(unknown))}.")
+                    d["basis"] = [b for b in d.get("basis", []) if b not in drop]
+                    if not d["basis"]:
+                        raise StratError("У решения не может не остаться оснований: сначала добавьте новые (--add-basis).")
         if not hit:
             raise StratError(f"Решение {args.id} не найдено.")
         write_jsonl(pr.decisions_path, rows)
-    journal(pr, "decision_update", {"id": hit["id"], "status": hit.get("status"), "note": args.note or ""})
-    print(f"{hit['id']} обновлено: статус {hit['status']}, пересмотр {hit.get('review_by')}.")
+    journal(pr, "decision_update", {"id": hit["id"], "status": hit.get("status"), "basis": hit.get("basis"),
+                                    "note": args.note or ""})
+    print(f"{hit['id']} обновлено: статус {hit['status']}, пересмотр {hit.get('review_by')}, основания: "
+          f"{', '.join(hit.get('basis', []))}. Текст decisions/{hit['id']}.md поправьте под новые основания.")
     return 0
 
 
@@ -163,10 +173,13 @@ def check(pr) -> dict:
                 continue
             if c.get("status") in ("disputed", "retracted", "superseded"):
                 st = {"disputed": "оспорено", "retracted": "отозвано", "superseded": "заменено"}[c["status"]]
-                changed.append(f"{d['id']}: основание {b} {st} — {short(c.get('status_note'), 80)}")
+                repl = f"; замена: {c['superseded_by']}" if c.get("superseded_by") else ""
+                changed.append(f"{d['id']}: основание {b} {st} — {short(c.get('status_note'), 80)}{repl}. Убрать из "
+                               f"оснований: ./strat decision update {d['id']} --remove-basis {b}")
             exp = parse_date(c.get("expires"))
             if exp and exp < t:
-                changed.append(f"{d['id']}: основание {b} устарело (срок {c['expires']})")
+                changed.append(f"{d['id']}: основание {b} устарело (срок {c['expires']}). Если на него больше не "
+                               f"опираемся: ./strat decision update {d['id']} --remove-basis {b}")
     for k in pr.commitments():
         if k.get("status") != "open":
             continue
