@@ -460,7 +460,38 @@ def pdf_to_text(path):
             parts.append(f"\n[стр. {i}]\n" + (page.extract_text() or ""))
         return "\n".join(parts)
     except Exception:  # noqa: BLE001
+        pass
+    return _pdf_macos(path)
+
+
+_SWIFT_PDF = """
+import Foundation
+import PDFKit
+let url = URL(fileURLWithPath: CommandLine.arguments[1])
+guard let doc = PDFDocument(url: url) else { exit(1) }
+for i in 0..<doc.pageCount {
+    print("\\n[стр. \\(i + 1)]")
+    print(doc.page(at: i)?.string ?? "")
+}
+"""
+
+
+def _pdf_macos(path):
+    """На маке без pdftotext и pypdf: системный PDFKit через swift (есть вместе с Command Line Tools)."""
+    import sys
+    import tempfile
+    exe = shutil.which("swift")
+    if sys.platform != "darwin" or not exe:
         return None
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".swift", delete=False, encoding="utf-8") as f:
+            f.write(_SWIFT_PDF)
+        r = subprocess.run([exe, f.name, str(path)], capture_output=True, timeout=180)
+        if r.returncode == 0:
+            return r.stdout.decode("utf-8", errors="replace")
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return None
 
 
 def subtitles_to_text(path) -> str:
@@ -506,7 +537,7 @@ def extract_text(path):
         text = pdf_to_text(p)
         if text and text.strip():
             return text, "pdf", True, ""
-        return "", "pdf", False, ("Текст PDF не извлечён (нет pdftotext/pypdf или это скан). "
+        return "", "pdf", False, ("Текст PDF не извлечён (нет pdftotext, pypdf или swift, либо это скан). "
                                    "Прочитайте файл через Read и фиксируйте сведения с указанием страницы.")
     if ext in (".html", ".htm"):
         title, text, _ = html_to_text(p.read_text(encoding="utf-8", errors="replace"))

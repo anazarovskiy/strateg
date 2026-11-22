@@ -30,9 +30,11 @@ WORKFLOWS = {
     "comms": ["frame", "collect", "research", "options", "strategy", "report"],
     "diagnostic": ["frame", "collect", "research", "options", "strategy", "report", "decide"],
     "revisit": ["monitor"],
+    "brief": [s for s, _ in STAGES],
 }
 WORKFLOW_NAMES = {"full": "полный цикл", "quick": "быстрая справка", "comms": "коммуникационная задача",
-                  "diagnostic": "диагностика метрики", "revisit": "пересмотр"}
+                  "diagnostic": "диагностика метрики", "revisit": "пересмотр",
+                  "brief": "стратегия по брифу заказчика"}
 STAGE_TEMPLATES = {
     "frame": ["brief.md"],
     "research": ["research/plan.md", "research/findings.md"],
@@ -41,6 +43,18 @@ STAGE_TEMPLATES = {
     "report": ["summary.md"],
     "monitor": ["revisions.md"],
 }
+# процесс «по брифу»: вместо коммуникационной стратегии — финансовая модель и план по кварталам,
+# итог — документ в структуре заказчика (deliverable.md)
+WORKFLOW_TEMPLATES = {
+    "brief": {"strategy": ["strategy/product.md", "strategy/validation.md", "strategy/roadmap.md"],
+              "report": ["summary.md"]},
+}
+
+
+def stage_templates(workflow: str, stage: str) -> list:
+    return WORKFLOW_TEMPLATES.get(workflow, {}).get(stage, STAGE_TEMPLATES.get(stage, []))
+
+
 STAGE_HINTS = {
     "frame": "Постановка: уточнить вопрос, решение, получателя, ограничения и данные; заполнить brief.md (навык frame).",
     "collect": "Материалы: зарегистрировать файлы руководителя и стартовые открытые источники (навык collect).",
@@ -57,7 +71,7 @@ DIRS = ["inputs", "sources/snapshots", "sources/files", "evidence", "research", 
 
 def _copy_templates(pr: Project, stage: str) -> list:
     made = []
-    for rel in STAGE_TEMPLATES.get(stage, []):
+    for rel in stage_templates(pr.state().get("workflow"), stage):
         dst = pr.dir / rel
         if dst.exists():
             continue

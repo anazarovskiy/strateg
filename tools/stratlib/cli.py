@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sp("init", "создать проект под новую задачу")
     p.add_argument("title", nargs="+", help="название задачи")
     p.add_argument("--slug", help="имя папки проекта (латиницей)")
-    p.add_argument("--workflow", choices=["full", "quick", "comms", "diagnostic", "revisit"], help="тип процесса")
+    p.add_argument("--workflow", choices=["full", "quick", "comms", "diagnostic", "revisit", "brief"], help="тип процесса")
     p.add_argument("--budget", help="лимит стоимости, USD")
     p.add_argument("--owner", help="руководитель продукта (роль, без персональных данных)")
 
@@ -168,6 +168,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--strict", action="store_true")
     p.add_argument("--only-integrity", dest="only_integrity", action="store_true")
 
+    p = sp("release-check", "проверить репозиторий перед отправкой: личные пути, контакты, ключи")
+    p.add_argument("--fix-paths", dest="fix_paths", action="store_true")
+
+    sp("consistency", "найти темы, описанные в документах разными числами (сроки, пороги)")
+
     p = sp("impact", "что затрагивает изменение записи или источника")
     p.add_argument("ids", nargs="+")
 
@@ -214,6 +219,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp("cost", "стоимость и время")
     sp("report", "собрать итоговый отчёт (HTML и Markdown)")
+
+    mo = sp("model", "финансовая модель: допущения и результаты расчёта в реестре").add_subparsers(
+        dest="sub", metavar="действие")
+    p = sp("init", "положить шаблон расчёта в analysis/model.py", mo)
+    p.add_argument("--force", action="store_true")
+    p = sp("sync", "занести analysis/model.json в реестр (допущения и оценки)", mo)
+    p.add_argument("file", nargs="?")
+    p.add_argument("--verbose", action="store_true")
+    sp("show", "записи модели: ключ → номер в реестре", mo)
+
+    dl = sp("deliverable", "итоговый документ в структуре, которую задал заказчик").add_subparsers(
+        dest="sub", metavar="действие")
+    p = sp("set", "задать части документа (из брифа)", dl)
+    p.add_argument("--parts", required=True, help="«Клиент и его проблема|Предложение и путь к клиенту|…»")
+    p.add_argument("--lead", help="что сказать в начале документа, если бриф это требует")
+    p.add_argument("--source", help="источник, где задана структура (обычно бриф, S-001)")
+    sp("show", "показать заданную структуру", dl)
 
     da = sp("data", "анализ данных").add_subparsers(dest="sub", metavar="действие")
     p = sp("profile", "профиль таблицы: типы, пропуски, периоды, единицы", da)
@@ -267,13 +289,14 @@ def main(argv=None) -> int:
 
 
 def dispatch(args, ap):
-    from . import claims, costs, data, decisions, evalcheck, impact, lint, report, sources, state
+    from . import claims, costs, data, decisions, deliverable, evalcheck, impact, lint, model, release, report, \
+        sources, state
     c = args.cmd
     simple = {
         "init": state.cmd_init, "use": state.cmd_use, "list": state.cmd_list, "status": state.cmd_status,
         "doctor": state.cmd_doctor, "stage": state.cmd_stage, "step": state.cmd_step, "ask": state.cmd_ask,
         "answer": state.cmd_answer, "next": state.cmd_next, "note": state.cmd_note, "workflow": state.cmd_workflow,
-        "log": state.cmd_log, "lint": lint.cmd_lint, "impact": impact.cmd_impact, "search": impact.cmd_search,
+        "log": state.cmd_log, "lint": lint.cmd_lint, "consistency": lint.cmd_consistency, "release-check": release.cmd_release_check, "impact": impact.cmd_impact, "search": impact.cmd_search,
         "cost": costs.cmd_cost, "report": report.cmd_report, "pii": data.cmd_pii, "eval": evalcheck.cmd_eval,
     }
     if c in ("stage", "step", "ask", "answer", "next", "workflow"):
@@ -303,6 +326,8 @@ def dispatch(args, ap):
         ("commit", "add"): decisions.commit_add, ("commit", "list"): decisions.commit_list,
         ("data", "profile"): data.cmd_profile, ("media", "frames"): data.cmd_frames,
         ("media", "transcribe"): data.cmd_transcribe,
+        ("model", "init"): model.cmd_init, ("model", "sync"): model.cmd_sync, ("model", "show"): model.cmd_show,
+        ("deliverable", "set"): deliverable.cmd_set, ("deliverable", "show"): deliverable.cmd_show,
     }
     if (c, sub) in table:
         return table[(c, sub)](args)

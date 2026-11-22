@@ -49,7 +49,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "WebFetch|Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "matcher": "WebFetch|Write|Edit|MultiEdit|NotebookEdit|Bash|mcp__strat__strat_stage",
         "hooks": [
           {
             "type": "command",

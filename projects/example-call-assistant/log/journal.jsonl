@@ -88,3 +88,119 @@
 {"ts": "2026-11-09T20:30:26+03:00", "actor": "agent", "kind": "next", "text": "Сопровождение: K-004 — перепроверить цену МТС Секретаря до 16.11.2026; пересмотр D-001 не позже 02.02.2027"}
 {"ts": "2026-11-09T20:30:45+03:00", "actor": "agent", "kind": "report", "files": ["report.md", "report.html"]}
 {"ts": "2026-11-09T20:31:13+03:00", "actor": "agent", "kind": "report", "files": ["report.md", "report.html"]}
+{"ts": "2026-11-10T17:05:14+03:00", "actor": "hook", "kind": "session", "source": "startup", "session": "77a518fa-e8ab-4d2f-803d-e0a3dbfa0968"}
+{"ts": "2026-11-10T17:05:40+03:00", "actor": "hook", "kind": "session", "source": "startup", "session": "2c8da60c-0323-474e-859d-f5d9ad411fab"}
+{"ts": "2026-11-10T17:06:35+03:00", "actor": "user", "kind": "user_prompt", "text": "где мы остановились?"}
+{"ts": "2026-11-10T17:06:39+03:00", "actor": "agent", "kind": "tool", "tool": "Skill", "skill": "strateg-resume"}
+{"ts": "2026-11-10T17:06:44+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat status; echo ---; ./strat log --tail 25; echo ---; ./strat decision check"}
+{"ts": "2026-11-10T17:06:49+03:00", "actor": "hook", "kind": "guard", "tool": "Bash", "reason": "Реестры, снимки и журналы проекта меняются только через ./strat, не через оболочку."}
+{"ts": "2026-11-10T17:06:52+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "cd projects/example-call-assistant && ls; ls decisions"}
+{"ts": "2026-11-10T17:06:54+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/revisions.md"}
+{"ts": "2026-11-10T17:06:54+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/decisions/D-001.md"}
+{"ts": "2026-11-10T17:06:55+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/brief.md"}
+{"ts": "2026-11-10T17:09:57+03:00", "actor": "agent", "kind": "tool", "tool": "mcp__strat__strat_claim_list", "input": "{}"}
+{"ts": "2026-11-10T17:10:01+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "cd  && ./strat ask --help 2>&1 | head -5; ./strat answer --help 2>&1 | head -5; ./strat status --help 2>&1 | head -5"}
+{"ts": "2026-11-10T17:10:24+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat status --json | python3 -c \"import json,sys; d=json.load(sys.stdin); print(json.dumps({k:v for k,v in d.items() if 'quest' in k.lower() or 'ask' in k.lower() or 'open' in k.lower()}, ensure_a…"}
+{"ts": "2026-11-10T17:10:36+03:00", "actor": "agent", "kind": "tool", "tool": "ToolSearch", "input": "{\"query\": \"select:WebSearch,WebFetch\", \"max_results\": 2}"}
+{"ts": "2026-11-10T17:10:43+03:00", "actor": "agent", "kind": "step", "step": "K-004", "action": "start", "note": ""}
+{"ts": "2026-11-10T17:10:43+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat source list | grep -E \"S-004\"; ./strat step K-004 start; echo \"code=$?\""}
+{"ts": "2026-11-10T17:10:54+03:00", "actor": "agent", "kind": "tool", "tool": "WebSearch", "query": "МТС Секретарь стоимость в месяц 2026"}
+{"ts": "2026-11-10T17:11:02+03:00", "actor": "agent", "kind": "source", "id": "S-014", "title": "Обновленный тарифный план «МТС Супер» открыт для подключения и перехода с 15 октября", "url": "https://mobile-review.com/all/?p=261958", "path": null, "flags": []}
+{"ts": "2026-11-10T17:11:03+03:00", "actor": "agent", "kind": "tool_error", "tool": "source fetch", "url": "https://mts.ru/personal/mobilnaya-svyaz/uslugi/mobilnaya-svyaz/sekretar", "error": "HTTP 500"}
+{"ts": "2026-11-10T17:11:03+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat source fetch \"https://mobile-review.com/all/?p=261958\"; echo \"code=$?\"; ./strat source fetch \"https://mobile-review.com/all/news/mts-predstavila-podpisku-sekretar/\"; echo \"code=$?\"; ./strat s…"}
+{"ts": "2026-11-10T17:11:05+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/sources/snapshots/S-014.md"}
+{"ts": "2026-11-10T17:11:15+03:00", "actor": "agent", "kind": "tool", "tool": "WebSearch", "query": "\"МТС Секретарь\" цена руб в месяц site:mts.ru"}
+{"ts": "2026-11-10T17:11:20+03:00", "actor": "agent", "kind": "source", "id": "S-015", "title": "МТС представила подписку «Секретарь+»", "url": "https://mobile-review.com/all/?p=213584", "path": null, "flags": []}
+{"ts": "2026-11-10T17:11:21+03:00", "actor": "agent", "kind": "source", "id": "S-016", "title": "МТС запустил умный сервис «Секретарь»", "url": "https://mobile-review.com/all/news/mts-zapustil-umnyj-servis-sekretar/", "path": null, "flags": []}
+{"ts": "2026-11-10T17:11:22+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat source fetch \"https://mobile-review.com/all/?p=213584\"; echo \"code=$?\"; ./strat source fetch \"https://mobile-review.com/all/news/mts-zapustil-umnyj-servis-sekretar/\"; echo \"code=$?\""}
+{"ts": "2026-11-10T17:11:25+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/sources/snapshots/S-015.md"}
+{"ts": "2026-11-10T17:11:26+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/sources/snapshots/S-016.md"}
+{"ts": "2026-11-10T17:11:32+03:00", "actor": "agent", "kind": "tool", "tool": "WebFetch", "url": "https://mts.ru/personal/mobilnaya-svyaz/uslugi/mobilnaya-svyaz/sekretar", "prompt": "Приведи дословно все фразы о стоимости услуги «Секретарь» (абонентская плата, бесплатный период, це…"}
+{"ts": "2026-11-10T17:11:37+03:00", "actor": "agent", "kind": "tool_error", "tool": "source fetch", "url": "https://moskva.mts.ru/personal/mobilnaya-svyaz/uslugi/mobilnaya-svyaz/sekretar", "error": "HTTP 404"}
+{"ts": "2026-11-10T17:11:37+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat source fetch \"https://moskva.mts.ru/personal/mobilnaya-svyaz/uslugi/mobilnaya-svyaz/sekretar\"; echo \"code=$?\""}
+{"ts": "2026-11-10T17:11:49+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": ".claude/skills/revisit/SKILL.md"}
+{"ts": "2026-11-10T17:12:00+03:00", "actor": "mcp", "kind": "claim", "id": "C-037", "type": "fact", "sources": ["S-015"], "basis": [], "verified": true, "text": "МТС с ноября 2025 продаёт подписку «Секретарь+» (Секретарь и «Интеллектуальная запись»: запись и расшифровка всех вызовов, «Звонок в чат») за 199 руб. в месяц,…"}
+{"ts": "2026-11-10T17:12:00+03:00", "actor": "agent", "kind": "tool", "tool": "mcp__strat__strat_claim_add", "input": "{\"type\": \"fact\", \"source\": \"S-015\", \"text\": \"МТС с ноября 2025 продаёт подписку «Секретарь+» (Секретарь и «Интеллектуальная запись»: запись и расшифровка всех …"}
+{"ts": "2026-11-10T17:12:00+03:00", "actor": "mcp", "kind": "claim", "id": "C-038", "type": "fact", "sources": ["S-014"], "basis": [], "verified": true, "text": "С 15.10.2026 в тариф «МТС Супер» (990 руб. за расчётный период) без доплаты входят «МТС Секретарь» для записи и расшифровки входящих вызовов и защита от спама …"}
+{"ts": "2026-11-10T17:12:00+03:00", "actor": "agent", "kind": "tool", "tool": "mcp__strat__strat_claim_add", "input": "{\"type\": \"fact\", \"source\": \"S-014\", \"text\": \"С 15.10.2026 в тариф «МТС Супер» (990 руб. за расчётный период) без доплаты входят «МТС Секретарь» для записи и ра…"}
+{"ts": "2026-11-10T17:12:09+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat claim update --help; ./strat claim retract --help | head -15"}
+{"ts": "2026-11-10T17:12:19+03:00", "actor": "agent", "kind": "claim_update", "id": "C-038", "status": "active", "note": ""}
+{"ts": "2026-11-10T17:12:19+03:00", "actor": "agent", "kind": "claim_update", "id": "C-037", "status": "active", "note": ""}
+{"ts": "2026-11-10T17:12:19+03:00", "actor": "agent", "kind": "claim_retract", "id": "C-018", "status": "retracted", "note": "полный текст Mobile-Review от 28.11.2025 [S-015] описывает «Секретарь+» как подписку МТС; блог ошибочно отнёс её к МегаФону"}
+{"ts": "2026-11-10T17:12:19+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat claim update C-038 --text \"С 15.10.2026 в тариф «МТС Супер» без доплаты входят «МТС Секретарь» для записи и расшифровки входящих вызовов и защита от спама «Защитник» (Mobile-Review, 15.10.202…"}
+{"ts": "2026-11-10T17:12:36+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat claim add --help | grep -E \"basis|expires|as-of\" ; ./strat claim supersede --help | grep -E \"by|note\""}
+{"ts": "2026-11-10T17:12:41+03:00", "actor": "agent", "kind": "claim", "id": "C-039", "type": "inference", "sources": [], "basis": ["C-014", "C-015", "C-016", "C-037", "C-038"], "verified": null, "text": "Базовая функция «ИИ отвечает на звонок и присылает расшифровку» на рынке бесплатна (МегаФон, Т-Банк для людей с нарушениями слуха, МТС в тарифе «МТС Супер») ил…"}
+{"ts": "2026-11-10T17:12:41+03:00", "actor": "agent", "kind": "claim_supersede", "id": "C-023", "status": "superseded", "note": "цены МТС обновлены: «Секретарь+» 199 руб. [C-037], Секретарь бесплатно в «МТС Супер» [C-038]; C-013 (149 руб., май 2025) устарело"}
+{"ts": "2026-11-10T17:12:41+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat claim add --type inference --basis C-014,C-015,C-016,C-037,C-038 --text \"Базовая функция «ИИ отвечает на звонок и присылает расшифровку» на рынке бесплатна (МегаФон, Т-Банк для людей с наруше…"}
+{"ts": "2026-11-10T17:12:44+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "cd projects/example-call-assistant && grep -n -E \"C-013|C-018|C-023|C-036\" research/findings.md options.md strategy/product.md strategy/comms.md summary.md"}
+{"ts": "2026-11-10T17:12:49+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/research/findings.md"}
+{"ts": "2026-11-10T17:12:50+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/options.md"}
+{"ts": "2026-11-10T17:12:51+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/strategy/product.md"}
+{"ts": "2026-11-10T17:12:51+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/summary.md"}
+{"ts": "2026-11-10T17:12:52+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/strategy/comms.md"}
+{"ts": "2026-11-10T17:12:59+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/research/findings.md"}
+{"ts": "2026-11-10T17:13:00+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/research/findings.md"}
+{"ts": "2026-11-10T17:13:03+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/research/findings.md"}
+{"ts": "2026-11-10T17:13:05+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/research/findings.md"}
+{"ts": "2026-11-10T17:13:07+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/options.md"}
+{"ts": "2026-11-10T17:13:08+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/options.md"}
+{"ts": "2026-11-10T17:13:10+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/options.md"}
+{"ts": "2026-11-10T17:13:12+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/options.md"}
+{"ts": "2026-11-10T17:13:13+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/options.md"}
+{"ts": "2026-11-10T17:13:14+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/options.md"}
+{"ts": "2026-11-10T17:13:15+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/strategy/product.md"}
+{"ts": "2026-11-10T17:13:18+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/strategy/product.md"}
+{"ts": "2026-11-10T17:13:19+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/strategy/product.md"}
+{"ts": "2026-11-10T17:13:20+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/strategy/product.md"}
+{"ts": "2026-11-10T17:13:21+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/strategy/comms.md"}
+{"ts": "2026-11-10T17:13:22+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/strategy/comms.md"}
+{"ts": "2026-11-10T17:13:24+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/summary.md"}
+{"ts": "2026-11-10T17:13:25+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/summary.md"}
+{"ts": "2026-11-10T17:13:27+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/summary.md"}
+{"ts": "2026-11-10T17:13:31+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/summary.md"}
+{"ts": "2026-11-10T17:13:38+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/revisions.md"}
+{"ts": "2026-11-10T17:13:38+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "cd  && ./strat lint 2>&1 | tail -25"}
+{"ts": "2026-11-10T17:13:43+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "grep -rn \"E102\" tools/ | head; grep -rn -B3 -A12 \"def.*E102\\|\\\"E102\\\"\" tools/*.py | head -60"}
+{"ts": "2026-11-10T17:13:46+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "tools/stratlib/lint.py"}
+{"ts": "2026-11-10T17:13:49+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "grep -n -A8 \"def refs_in\" tools/stratlib/*.py"}
+{"ts": "2026-11-10T17:13:57+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/research/findings.md"}
+{"ts": "2026-11-10T17:13:57+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/research/findings.md"}
+{"ts": "2026-11-10T17:13:58+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/revisions.md"}
+{"ts": "2026-11-10T17:13:59+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/revisions.md"}
+{"ts": "2026-11-10T17:14:00+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/revisions.md"}
+{"ts": "2026-11-10T17:14:01+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/revisions.md"}
+{"ts": "2026-11-10T17:14:02+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat lint 2>&1 | tail -15"}
+{"ts": "2026-11-10T17:14:06+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat commit --help | head -20; ./strat decision update --help 2>&1 | head -25"}
+{"ts": "2026-11-10T17:14:11+03:00", "actor": "agent", "kind": "commitment_done", "id": "K-004", "note": "R-002: «Секретарь+» 199 руб. [C-037], Секретарь в «МТС Супер» без доплаты [C-038]; C-023 заменён на C-039; рекомендация в силе"}
+{"ts": "2026-11-10T17:14:11+03:00", "actor": "agent", "kind": "step", "step": "K-004", "action": "done", "note": "R-002"}
+{"ts": "2026-11-10T17:14:11+03:00", "actor": "agent", "kind": "report", "files": ["report.md", "report.html"]}
+{"ts": "2026-11-10T17:14:11+03:00", "actor": "agent", "kind": "next", "text": "Сопровождение: руководитель решает, обновить ли основания D-001 (C-013 → C-037, C-038); K-001 до 20.11, K-003 до 25.11, K-002 до 27.11 (учесть отличие от «Секретарь+»); пересмотр D-001 не позже 02.02.2027"}
+{"ts": "2026-11-10T17:14:11+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat commit done K-004 --help 2>&1 | grep -E \"note|usage\" ; ./strat commit done K-004 --note \"R-002: «Секретарь+» 199 руб. [C-037], Секретарь в «МТС Супер» без доплаты [C-038]; C-023 заменён на C-…"}
+{"ts": "2026-11-10T17:14:59+03:00", "actor": "agent", "kind": "tool", "tool": "AskUserQuestion", "questions": "Одно из оснований решения D-001 о пилоте (цена МТС Секретаря 149 руб., май 2025) устарело. Свежие данные: «Секретарь+» МТС стоит 199 руб./мес, а в тарифе «МТС Супер» Секретарь бесплатен с 15.10.2026.…"}
+{"ts": "2026-11-10T17:15:21+03:00", "actor": "agent", "kind": "ask", "id": "H-003", "question": "D-001: основание C-013 устарело; обновить основания, оставить или пересмотреть цену?"}
+{"ts": "2026-11-10T17:15:21+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat ask \"D-001: основание C-013 устарело; обновить основания, оставить или пересмотреть цену?\" --options \"обновить основания;оставить;пересмотреть цену\" --why \"K-004, пересмотр R-002\"; ./strat st…"}
+{"ts": "2026-11-10T17:15:25+03:00", "actor": "user", "kind": "answer", "id": "H-003", "answer": "обновить основания"}
+{"ts": "2026-11-10T17:15:25+03:00", "actor": "agent", "kind": "decision_update", "id": "D-001", "status": "active", "note": "R-002: C-013 (цена мая 2025) заменено свежими данными о ценах МТС; решение в силе (H-003)"}
+{"ts": "2026-11-10T17:15:25+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat answer H-003 \"обновить основания\" --note \"решение D-001 в силе, пилот и цена 199–299 руб. без изменений\" && ./strat decision update D-001 --add-basis C-037,C-038,C-039 --note \"R-002: C-013 (ц…"}
+{"ts": "2026-11-10T17:15:28+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/decisions/D-001.md"}
+{"ts": "2026-11-10T17:15:29+03:00", "actor": "agent", "kind": "report", "files": ["report.md", "report.html"]}
+{"ts": "2026-11-10T17:15:29+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat decision check; ./strat lint 2>&1 | tail -4; ./strat report"}
+{"ts": "2026-11-10T17:15:36+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "grep -rn -B2 -A6 \"Основания изменились\\|устарело (срок\" tools/stratlib/*.py | grep -v lint.py | head -50"}
+{"ts": "2026-11-10T17:15:38+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "tools/stratlib/decisions.py"}
+{"ts": "2026-11-10T17:15:45+03:00", "actor": "agent", "kind": "next", "text": "Сопровождение: K-001 до 20.11, K-003 до 25.11, K-002 до 27.11 (сценарии должны отличаться от МТС «Секретарь+» за 199 руб.); пересмотр D-001 не позже 02.02.2027"}
+{"ts": "2026-11-10T17:15:45+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat next \"Сопровождение: K-001 до 20.11, K-003 до 25.11, K-002 до 27.11 (сценарии должны отличаться от МТС «Секретарь+» за 199 руб.); пересмотр D-001 не позже 02.02.2027\" && git status --short"}
+{"ts": "2026-11-10T23:21:30+03:00", "actor": "hook", "kind": "session", "source": "startup", "session": "31a250b7-e00f-41c9-9a4a-7a92ec9888f5"}
+{"ts": "2026-11-10T23:24:17+03:00", "actor": "user", "kind": "user_prompt", "text": "убери C-013 из оснований D-001"}
+{"ts": "2026-11-10T23:24:28+03:00", "actor": "agent", "kind": "decision_update", "id": "D-001", "status": "active", "basis": ["C-014", "C-015", "C-016", "C-026", "C-034", "C-037", "C-038", "C-039"], "note": ""}
+{"ts": "2026-11-10T23:24:28+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat decision update D-001 --remove-basis C-013; echo \"exit $?\"; grep -n \"C-013\" projects/example-call-assistant/decisions/D-001.md"}
+{"ts": "2026-11-10T23:24:31+03:00", "actor": "agent", "kind": "tool", "tool": "Read", "path": "projects/example-call-assistant/decisions/D-001.md"}
+{"ts": "2026-11-10T23:24:37+03:00", "actor": "agent", "kind": "tool", "tool": "Edit", "path": "projects/example-call-assistant/decisions/D-001.md"}
+{"ts": "2026-11-10T23:24:38+03:00", "actor": "agent", "kind": "next", "text": "Сопровождение: K-001 до 20.11, K-003 до 25.11, K-002 до 27.11 (сценарии должны отличаться от МТС «Секретарь+» за 199 руб.); пересмотр D-001 не позже 02.02.2027"}
+{"ts": "2026-11-10T23:24:38+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat lint; echo \"exit $?\"; ./strat decision check; ./strat next \"Сопровождение: K-001 до 20.11, K-003 до 25.11, K-002 до 27.11 (сценарии должны отличаться от МТС «Секретарь+» за 199 руб.); пересмо…"}
+{"ts": "2026-11-10T23:25:05+03:00", "actor": "user", "kind": "user_prompt", "text": "mv evals/answers ~/Desktop/answers_hidden"}
+{"ts": "2026-11-10T23:25:37+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "ls -la evals/answers; ls -d ~/Desktop/answers_hidden 2>&1; git ls-files evals/answers | head"}
+{"ts": "2026-11-10T23:25:45+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "mv evals/answers ~/Desktop/answers_hidden && ls -la ~/Desktop/answers_hidden && git status --short evals/"}
+{"ts": "2026-11-10T23:27:17+03:00", "actor": "hook", "kind": "session", "source": "startup", "session": "4ace5706-2703-4fab-b754-ed32d31da808"}
+{"ts": "2026-11-10T23:27:47+03:00", "actor": "user", "kind": "user_prompt", "text": "/strateg С весны падает удержание новых пользователей нашего мобильного приложения. Во вложении выгрузка по недельным когортам: платформа, канал привлечения, число новых пользователей и сколько из них вернулись на 1-й, 7-й и 30-й день. Почему падает удержание и что делать? Решение: откатывать ли ап…"}
+{"ts": "2026-11-10T23:27:49+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat status 2>&1 | head -30; ls projects; head -5 evals/data/retention_demo.csv; wc -l evals/data/retention_demo.csv; cat knowledge/diagnostics.md | head -80"}
+{"ts": "2026-11-16T21:03:52+03:00", "actor": "agent", "kind": "report", "files": ["report.md", "report.html"]}

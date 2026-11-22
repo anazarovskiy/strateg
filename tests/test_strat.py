@@ -290,6 +290,104 @@ class StratTest(unittest.TestCase):
         with self.assertRaises(StratError):
             h.redirect_request(req, None, 302, "Found", {}, "http://127.0.0.1/admin")
 
+    def test_17_report_polish_and_consistency(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        from stratlib.report import polish
+        t = polish("D7 31.6% (2.6 п.п.), когорта 06.04, до 15.06.2026, $1.95, версия 2.1.3. Возражение (critic). "
+                   "Выбрано (ответ H-004). См. `strategy/validation.md` [C-018].")
+        self.assertIn("31,6%", t)
+        self.assertIn("2,6 п. п.", t)
+        self.assertIn("06.04", t)
+        self.assertIn("15.06.2026", t)
+        self.assertIn("$1.95", t)
+        self.assertIn("2.1.3", t)
+        self.assertNotIn("critic", t)
+        self.assertNotIn("H-004", t)
+        self.assertIn("раздел «План проверки»", t)
+        self.assertIn("[C-018]", t)
+        (self.pdir / "strategy").mkdir(exist_ok=True)
+        (self.pdir / "strategy" / "validation.md").write_text(
+            "# План\n\nТест покажет итог за 2–3 недели.\n\nПо расчёту мощности итог теста через 4.5 недели.\n",
+            encoding="utf-8")
+        code, out = run(["consistency"])
+        self.assertIn("2–3", out)
+        self.assertIn("4.5", out)
+
+    def test_18_comms_memo_and_stage_cost(self):
+        (self.pdir / "strategy").mkdir(exist_ok=True)
+        memo = ("# Коммуникация\n\n<!-- внешняя коммуникация не нужна: решение внутреннее -->\n\nКоманде продукта и "
+                "маркетинга: падение на Android проверяем тестом, закупку оцениваем по удержанным на рубль. Не обещаем "
+                "возврата к январскому уровню.\n")
+        (self.pdir / "strategy" / "comms.md").write_text(memo, encoding="utf-8")
+        code, out = run(["lint", "--json", "strategy/comms.md"])
+        codes = {i["code"] for i in json.loads(out)}
+        self.assertFalse(codes & {"E201", "E208", "E209", "E210", "E212"}, codes)
+        sys.path.insert(0, str(ROOT / "tools"))
+        from stratlib.hooks import _is_stage_change
+        self.assertTrue(_is_stage_change("Bash", {"command": "./strat stage options done && ./strat next x"}))
+        self.assertTrue(_is_stage_change("mcp__strat__strat_stage", {}))
+        self.assertFalse(_is_stage_change("Bash", {"command": "./strat status"}))
+
+
+    def test_19_idle_question_gate(self):
+        tp = Path(self.tmp) / "t.jsonl"
+        def stop_with(text):
+            tp.write_text(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}},
+                                     ensure_ascii=False) + "\n", encoding="utf-8")
+            code, out = run(["hook", "stop"], stdin=json.dumps({"transcript_path": str(tp), "session_id": "x"}))
+            return '"block"' in out
+        self.assertTrue(stop_with("Этап исследования закрыт.\n\nПродолжить исследование сейчас?"))
+        self.assertTrue(stop_with("Варианты готовы, переходим к стратегии. Продолжать?"))
+        self.assertFalse(stop_with("Какую цену вы считаете приемлемой для пилота?"))
+        self.assertFalse(stop_with("Отчёт собран, путь: projects/t1/report.html."))
+
+    def test_20_model_and_deliverable(self):
+        code, _ = run(["init", "Бриф-тест", "--workflow", "brief"])
+        brief = Path(self.tmp) / "brief.txt"
+        brief.write_text("Ставка — 500 руб. валовой прибыли за один дополнительный оплаченный месяц одного номера. "
+                         "Сдайте один документ из двух частей.", encoding="utf-8")
+        run(["source", "add", str(brief), "--title", "Бриф"])
+        code, out = run(["claim", "add", "--type", "fact", "--source", "S-001", "--text", "Ставка 500 руб. за месяц",
+                         "--quote", "Ставка — 500 руб. валовой прибыли за один дополнительный оплаченный месяц"])
+        self.assertEqual(code, 0, out)
+        code, out = run(["deliverable", "set", "--parts", "Клиент и проблема|Прибыль", "--lead", "клиенты и итог"])
+        self.assertEqual(code, 0, out)
+        code, out = run(["model", "init"])
+        self.assertEqual(code, 0, out)
+        pdir = Path(self.tmp) / "projects"
+        proj = next(p for p in pdir.iterdir() if (p / "analysis" / "model.py").exists())
+        model = {"facts": [{"key": "rate", "value": 500, "unit": "руб.", "text": "Ставка", "claim": "C-001"}],
+                 "assumptions": [{"key": "months", "value": 12000, "low": 6000, "high": 15000, "unit": "мес.",
+                                  "text": "Дополнительные месяцы", "why": "оценка", "check": "пилот"}],
+                 "results": [{"key": "gp", "value": 6000000, "unit": "руб.", "text": "Прирост прибыли",
+                              "basis": ["months", "rate"]}]}
+        (proj / "analysis" / "model.json").write_text(json.dumps(model, ensure_ascii=False), encoding="utf-8")
+        code, out = run(["model", "sync"])
+        self.assertEqual(code, 0, out)
+        self.assertIn("новых записей: 2", out)
+        claims = [json.loads(l) for l in (proj / "evidence" / "claims.jsonl").read_text(encoding="utf-8").splitlines()]
+        res = [c for c in claims if c["type"] == "estimate"][0]
+        self.assertEqual(sorted(res["basis"]), ["C-001", "C-002"])
+        self.assertTrue(res["verified"])
+        model["assumptions"][0]["value"] = 10000
+        model["results"][0]["value"] = 5000000
+        (proj / "analysis" / "model.json").write_text(json.dumps(model, ensure_ascii=False), encoding="utf-8")
+        code, out = run(["model", "sync"])
+        self.assertIn("изменилось: 2", out)
+        self.assertIn("C-002", out)
+        code, out = run(["lint", "deliverable.md"])
+        self.assertIn("E213", out)
+        (proj / "deliverable.md").write_text(
+            "# Т\n\n## Коротко\n\n" + "Текст для руководителя со ссылкой [C-001]. " * 3 +
+            "\n\n## 1. Клиент и проблема\n\n" + "Описание клиента и его проблемы подробно. " * 3 +
+            "\n\n## 2. Прибыль\n\nПрирост прибыли 5 000 000 руб. [C-003]. " + "Пояснение к расчёту. " * 4 + "\n",
+            encoding="utf-8")
+        code, out = run(["lint", "deliverable.md"])
+        self.assertNotIn("E213", out)
+        code, out = run(["report"])
+        html_text = (proj / "report.html").read_text(encoding="utf-8")
+        self.assertLess(html_text.index("2. Прибыль"), html_text.index("Приложение А"))
+        self.assertIn("Рабочие материалы", html_text)
 
 if __name__ == "__main__":
     unittest.main()

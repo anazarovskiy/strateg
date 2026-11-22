@@ -387,6 +387,21 @@ def list_projects() -> list:
 
 # ---------- журнал ----------
 
+_HOME = os.path.expanduser("~")
+
+
+def _scrub_paths(obj):
+    """Журнал уходит в репозиторий: абсолютные пути к папке агента и к домашней папке заменяем короткими."""
+    if isinstance(obj, str):
+        return obj.replace(str(ROOT) + os.sep, "").replace(str(ROOT), ".").replace(_HOME, "~") \
+            if _HOME not in ("/", "") else obj.replace(str(ROOT) + os.sep, "")
+    if isinstance(obj, dict):
+        return {k: _scrub_paths(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_scrub_paths(v) for v in obj]
+    return obj
+
+
 def journal(project, kind: str, detail, actor: str = None):
     """Запись в журнал действий проекта (или в общий журнал, если проекта нет)."""
     actor = actor or os.environ.get("STRAT_ACTOR") or "agent"
@@ -396,6 +411,7 @@ def journal(project, kind: str, detail, actor: str = None):
     else:
         row["text"] = str(detail)
     path = project.journal_path if project else ROOT_LOG / "journal.jsonl"
+    row = _scrub_paths(row)
     try:
         append_jsonl(path, row)
     except OSError:

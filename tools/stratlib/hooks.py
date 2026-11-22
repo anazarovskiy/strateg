@@ -137,11 +137,29 @@ def user_prompt(p: dict):
     journal(pr, "user_prompt", {"text": short(p.get("prompt"), 300)}, actor="user")
 
 
+_STAGE_CMD = re.compile(r"(?:\./strat|strat\.py)\s+stage\s+\w+\s+(?:start|done|reopen)")
+
+
+def _is_stage_change(tool: str, ti: dict) -> bool:
+    if tool == "Bash":
+        return bool(_STAGE_CMD.search(ti.get("command") or ""))
+    return tool.endswith("strat_stage")
+
+
 def pre_tool(p: dict):
     from .sources import policy_check_url
     tool = p.get("tool_name") or ""
     ti = p.get("tool_input") or {}
     reason = None
+    if _is_stage_change(tool, ti):
+        # стоимость до смены этапа приписываем этапу, который закрывается
+        pr = _active()
+        if pr:
+            from .costs import record_stop
+            try:
+                record_stop(pr, p)
+            except Exception:  # noqa: BLE001
+                _log_error("pre-tool/cost")
     if tool == "WebFetch":
         ok, why = policy_check_url(ti.get("url") or "")
         if not ok:
@@ -209,7 +227,10 @@ def post_tool_failure(p: dict):
     tool = p.get("tool_name") or ""
     ti = p.get("tool_input") or {}
     err = p.get("error") or _response_text(p.get("tool_response"))
-    journal(pr, "tool_failure", {"tool": tool, **_tool_summary(tool, ti), "error": short(err, 240)},
+    err = re.sub(r"\s+", " ", str(err or "")).strip()
+    # в склеенной команде начало вывода обычно от успешной части; причина сбоя в конце
+    tail = err if len(err) <= 240 else "…" + err[-239:]
+    journal(pr, "tool_failure", {"tool": tool, **_tool_summary(tool, ti), "error": tail},
             actor=p.get("agent_type") or "agent")
     if tool in ("WebFetch", "WebSearch"):
         _out({"hookSpecificOutput": {"hookEventName": "PostToolUseFailure", "additionalContext":
@@ -239,16 +260,59 @@ def stop(p: dict):
         return
     from .lint import lint_project, project_docs
     changed = [rel for rel in project_docs(pr) if (pr.dir / rel).stat().st_mtime > last]
-    if not changed:
-        return
-    issues = [i for i in lint_project(pr, files=changed) if i["severity"] == "error" and i["code"].startswith("E1")]
+    issues = []
+    if changed:
+        issues = [i for i in lint_project(pr, files=changed) if i["severity"] == "error" and i["code"].startswith("E1")]
     if not issues:
+        _idle_question_gate(pr, p)
         return
     lines = [f"- {i['file']}:{i['line']} [{i['code']}] {i['message']}" for i in issues[:15]]
     journal(pr, "stop_gate", {"errors": len(issues)}, actor="hook")
     _out({"decision": "block", "reason": "Проверка доказательной базы в изменённых документах нашла ошибки:\n" +
           "\n".join(lines) + "\nИсправьте ссылки или перенесите пункты в гипотезы, затем завершите ход. "
           "Подробно: ./strat lint"})
+
+
+_CONTINUE_Q = re.compile(r"(продолж\w*|идём дальше|идти дальше|перехо\w* к|начина\w*|запуска\w* (?:этап|исследован))"
+                         r"[^?\n]{0,80}\?\s*$", re.I)
+
+
+def _last_assistant_text(transcript_path: str) -> str:
+    text = ""
+    try:
+        with open(transcript_path, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if rec.get("type") != "assistant":
+                    continue
+                content = (rec.get("message") or {}).get("content") or []
+                parts = [c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"]
+                if parts:
+                    text = "\n".join(parts)
+    except OSError:
+        return ""
+    return text.strip()
+
+
+def _idle_question_gate(pr, p: dict):
+    """Агент закончил ход вопросом «продолжать?», хотя выбор здесь не нужен. Процесс сам определяет, где нужен
+    человек (рамка, дорогое исследование, выбор варианта, решение); в остальных местах работа идёт без пауз."""
+    tp = p.get("transcript_path")
+    if not tp:
+        return
+    text = _last_assistant_text(tp)
+    if not text or not _CONTINUE_Q.search(text[-300:]):
+        return
+    st = pr.state()
+    if all(st.get("stages", {}).get(s, {}).get("status") == "done" for s in ("report",)):
+        return  # отчёт готов: дальше решение, и вопрос руководителю уместен
+    journal(pr, "idle_question", {"stage": st.get("stage")}, actor="hook")
+    _out({"decision": "block", "reason": "Подтверждение продолжения не нужно: руководитель участвует только в точках "
+          "из навыка strateg (рамка, дорогое исследование, выбор варианта, решение), и там вопрос задаётся через "
+          "AskUserQuestion. Коротко сообщите итог этапа и переходите к следующему этапу в этом же ходе."})
 
 
 def statusline(p: dict):

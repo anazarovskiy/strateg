@@ -27,6 +27,7 @@ REQUIRED = {
                           ["обещани"]],
     "strategy/validation.md": [["ожидаем"], ["сравни", "контрол", "база"], ["срок"],
                                ["нежелательн", "побочн", "ограничител"]],
+    "strategy/roadmap.md": [["квартал"], ["человеко", "ресурс", "люд"], ["риск"], ["просьб", "попрос"]],
     "summary.md": [],
 }
 STAGE_DOCS = {
@@ -37,8 +38,9 @@ STAGE_DOCS = {
     "report": ["brief.md", "research/findings.md", "options.md", "strategy/product.md", "strategy/comms.md",
                "strategy/validation.md", "summary.md"],
 }
+COMMS_SKIP = "внешняя коммуникация не нужна:"
 SKIP_DIRS = ("sources/", "inputs/", "log/", "interviews/real/", "interviews/synthetic/")
-SKIP_FILES = {"README.md", "report.md"}
+SKIP_FILES = {"README.md", "report.md", "analysis/model.md"}
 
 
 def _low(s: str) -> str:
@@ -309,14 +311,21 @@ def lint_project(pr, stage=None, files=None, strict=None) -> list:
     cmap = pr.claim_map()
     smap = pr.source_map()
     if stage:
-        targets = [f for f in STAGE_DOCS.get(stage, []) if (pr.dir / f).exists() or f in REQUIRED]
+        docs = list(STAGE_DOCS.get(stage, []))
+        if pr.state().get("workflow") == "brief":
+            # по брифу: вместо коммуникационной стратегии — план по кварталам; итог — документ заказчика
+            swap = {"strategy/comms.md": "strategy/roadmap.md"}
+            docs = [swap.get(d, d) for d in docs]
+        if stage == "report" and pr.state().get("deliverable"):
+            docs.append("deliverable.md")
+        targets = [f for f in docs if (pr.dir / f).exists() or f in REQUIRED or f == "deliverable.md"]
         if stage == "report":
             # в коротких процессах (quick) вариантов и стратегии нет — не требуем их документов
             from .state import WORKFLOWS
             wf = WORKFLOWS.get(pr.state().get("workflow"), WORKFLOWS["full"])
             owner = {"brief.md": "frame", "research/findings.md": "research", "options.md": "options",
                      "strategy/product.md": "strategy", "strategy/comms.md": "strategy",
-                     "strategy/validation.md": "strategy"}
+                     "strategy/validation.md": "strategy", "strategy/roadmap.md": "strategy"}
             targets = [f for f in targets if owner.get(f) is None or owner[f] in wf or (pr.dir / f).exists()]
         strict = True if strict is None else strict
     else:
@@ -332,6 +341,18 @@ def lint_project(pr, stage=None, files=None, strict=None) -> list:
         raw = p.read_text(encoding="utf-8", errors="replace")
         text = strip_comments(raw)
         issues += lint_file(rel, text, cmap, smap, strict)
+        if rel == "deliverable.md":
+            from .deliverable import check as check_deliverable
+            issues += check_deliverable(pr, text, strict)
+            continue
+        if rel == "strategy/comms.md" and COMMS_SKIP in _low(raw):
+            # задача без внешней коммуникации (часто диагностика): вместо полной стратегии короткая внутренняя
+            # записка; причина отказа записана в комментарии и видна при проверке
+            if not text.strip() or len(re.sub(r"#.*", "", text).strip()) < 80:
+                issues.append(_issue("error" if strict else "warning", "E212", rel, 1,
+                                     "коммуникационная стратегия пропущена, но нет и короткой записки: кому, что и "
+                                     "зачем сообщаем внутри команды"))
+            continue
         issues += check_required(rel, text, strict)
         if rel == "options.md":
             issues += check_options(text, cmap, strict, raw)
@@ -368,3 +389,53 @@ def cmd_lint(args):
             print(f"\nИтого: ошибок {e}, предупреждений {w}.")
     errors = any(i["severity"] == "error" for i in issues)
     return 1 if errors else 0
+
+
+# --- сквозные величины ---------------------------------------------------------------------------------------------
+
+TOPICS = {
+    "срок теста": ("тест", "эксперимент", "итог", "наблюд", "набор", "покажет", "раскат"),
+    "эффект и порог": ("эффект", "порог", "прирост", "ожидаем", "минимальн"),
+}
+_QTY = re.compile(r"(?<![\w.,])(\d+(?:[.,]\d+)?(?:\s?[–-]\s?\d+(?:[.,]\d+)?)?)\s?(недел\w*|дн(?:я|ей|ь)\b|"
+                  r"п\.\s?п\.|%)")
+
+
+def consistency(pr) -> list:
+    """Находит темы (срок теста, порог эффекта), которые в документах проекта описаны разными числами.
+    Это подсказка для вычитки, а не ошибка: разные числа бывают законными (D1 и D7, разные платформы)."""
+    found = {}
+    for rel in project_docs(pr):
+        if rel.startswith("decisions/") or rel == "revisions.md":
+            continue
+        text = strip_comments((pr.dir / rel).read_text(encoding="utf-8", errors="replace"))
+        for n, line in enumerate(text.splitlines(), 1):
+            low = _low(line)
+            for m in _QTY.finditer(line):
+                unit = m.group(2)
+                unit = "недели" if unit.startswith("недел") else "дни" if unit.startswith("дн") else \
+                    "п. п." if unit.startswith("п") else "%"
+                if unit == "%":
+                    continue
+                ctx = low[max(0, m.start() - 70): m.end() + 30]
+                for topic, words in TOPICS.items():
+                    if (topic == "срок теста") != (unit in ("недели", "дни")):
+                        continue
+                    if any(w in ctx for w in words):
+                        val = m.group(1).replace(",", ".").replace(" ", "")
+                        found.setdefault((topic, unit), {}).setdefault(val, []).append(f"{rel}:{n}")
+    return [{"topic": t, "unit": u, "values": v} for (t, u), v in found.items() if len(v) > 1]
+
+
+def cmd_consistency(args):
+    pr = get_project(args.project)
+    res = consistency(pr)
+    if not res:
+        print("Сквозные величины согласованы: сроки теста и пороги эффекта везде одни и те же.")
+        return 0
+    print("Одна тема описана разными числами. Проверь, не осталась ли прикидка из раннего черновика:")
+    for r in res:
+        print(f"\n{r['topic']} ({r['unit']}):")
+        for val, where in sorted(r["values"].items()):
+            print(f"  {val:>8}  " + ", ".join(where[:6]) + (" …" if len(where) > 6 else ""))
+    return 0

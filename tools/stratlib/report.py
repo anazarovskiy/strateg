@@ -17,7 +17,63 @@ SECTIONS = [
     ("strategy/product.md", "Продуктовая стратегия"),
     ("strategy/comms.md", "Коммуникационная стратегия"),
     ("strategy/validation.md", "План проверки"),
+    ("strategy/roadmap.md", "План по кварталам и ресурсы"),
+    ("analysis/model.md", "Финансовая модель"),
 ]
+
+DOC_NAMES = {rel: name for rel, name in SECTIONS}
+DOC_NAMES.update({"research/plan.md": "План исследования", "summary.md": "Короткий ответ", "revisions.md": "Пересмотры",
+                  "deliverable.md": "Документ для руководителя"})
+
+TOOL_NAMES = {"Bash": "команды strat и оболочки", "Read": "чтение файлов", "Write": "создание файлов",
+              "Edit": "правка файлов", "MultiEdit": "правка файлов", "WebSearch": "веб-поиск",
+              "WebFetch": "загрузка страниц", "Agent": "субагенты", "Task": "субагенты",
+              "AskUserQuestion": "вопросы руководителю", "Skill": "навыки", "Grep": "поиск по файлам",
+              "Glob": "поиск файлов"}
+HIDDEN_TOOLS = {"SubagentHandback", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TodoWrite", "ToolSearch"}
+
+_NUM_UNIT = r"(?=\s?(?:%|п\.\s?п\.|пп\b|процент|недел|дн|тыс|млн|млрд|руб|₽|раз|σ|x\b|×))"
+
+
+def _decimal_comma(t: str) -> str:
+    """31.6% → 31,6%: в русском тексте дробная часть отделяется запятой. Даты (15.06, 06.04.2026), версии и суммы
+    в долларах не трогаем: меняем число с одной цифрой после точки или любое число перед единицей измерения."""
+    def fix(m):
+        return m.group(1) + "," + m.group(2)
+    t = re.sub(r"(?<![\w.$])(\d+)\.(\d)(?![\d.]|\.\d)", fix, t)
+    t = re.sub(r"(?<![\w.$])(\d+)\.(\d+)(?![\d.])" + _NUM_UNIT, fix, t)
+    return re.sub(r"п\.п\.", "п. п.", t)
+
+
+def polish(text: str) -> str:
+    """Готовит текст документов к чтению руководителем: убирает служебные пометки агента, заменяет пути к файлам
+    названиями разделов отчёта, ставит десятичную запятую. Код, ссылки и метки реестра не трогает."""
+    # ссылки только на ответы руководителя ([H-006] или [H-006, H-007]) читателю ничего не дают
+    text = re.sub(r"\s*\[H-\d+(?:\s*,\s*H-\d+)*\]", "", text)
+    out = []
+    for part in re.split(r"(`[^`]*`|https?://\S+|\[[CSD]-\d+[^\]]*\])", text):
+        if not part:
+            continue
+        if part.startswith("`"):
+            inner = part.strip("`")
+            base = {k.rsplit("/", 1)[-1]: v for k, v in DOC_NAMES.items()}
+            if inner in DOC_NAMES or inner in base:
+                out.append(f"раздел «{DOC_NAMES.get(inner) or base[inner]}»")
+            elif re.fullmatch(r"decisions/(D-\d+)\.md", inner):
+                out.append("решение " + inner[10:-3])
+            else:
+                out.append(part)
+            continue
+        if part.startswith("http") or part.startswith("["):
+            out.append(part)
+            continue
+        t = re.sub(r"\s*\((?:critic|критик)\)", "", part, flags=re.I)
+        t = re.sub(r"\s*\((?:ответ|см\.)\s+H-\d+\)", "", t)
+        t = re.sub(r"\b(ответ(?:у|ом|е)?)\s+H-\d+", r"\1 руководителя", t)
+        t = re.sub(r"\bH-\d+\b", "ответ руководителя", t)
+        out.append(_decimal_comma(t))
+    return "".join(out)
+
 
 CSS = """
 :root{--bg:#fbfaf7;--fg:#1d1f21;--muted:#5f6368;--line:#e2ded6;--card:#fff;--accent:#1a5fb4;
@@ -224,6 +280,20 @@ def _ref_renderer(cmap, smap, dids):
     return render
 
 
+def _rel(src: dict) -> str:
+    r = src.get("reliability")
+    return r if r not in (None, "", "?") else "не оценена"
+
+
+def _failure_line(r: dict) -> str:
+    what = r.get("command") or r.get("url") or r.get("query") or r.get("path") or r.get("tool") or "инструмент"
+    err = (r.get("error") or r.get("text") or "").lstrip("…")
+    m = re.search(r"Exit code (\d+)", err)
+    if m:
+        return f"{short(what, 60)} — код выхода {m.group(1)}"
+    return f"{short(what, 60)} — {short(err[-90:], 90)}"
+
+
 def _process_md(pr) -> str:
     st = pr.state()
     from .state import STAGE_NAMES
@@ -236,7 +306,13 @@ def _process_md(pr) -> str:
         lines.append(f"| {STAGE_NAMES.get(key, key)} | {fmt_dt(info.get('started'))} | "
                      f"{fmt_dt(info.get('finished')) if b else 'в работе'} | {dur} |")
     j = read_jsonl(pr.journal_path)
-    tools = Counter(r.get("tool") for r in j if r.get("kind") == "tool" and r.get("tool"))
+    tools = Counter()
+    for r in j:
+        t = r.get("tool")
+        if r.get("kind") != "tool" or not t or t in HIDDEN_TOOLS:
+            continue
+        name = "strat через MCP" if t.startswith("mcp__strat") else TOOL_NAMES.get(t, t)
+        tools[name] += 1
     errors = [r for r in j if r.get("kind") in ("tool_error", "tool_failure")]
     prompts = sum(1 for r in j if r.get("kind") == "user_prompt")
     asked = st.get("human", [])
@@ -247,7 +323,7 @@ def _process_md(pr) -> str:
     quoted = [c for c in act if c.get("quote")]
     ver = sum(1 for c in quoted if c.get("verified"))
     srcs = pr.sources()
-    rel = Counter(s.get("reliability", "?") for s in srcs)
+    rel = Counter(_rel(s) for s in srcs)
     issues = lint_project(pr)
     e = sum(1 for i in issues if i["severity"] == "error")
     out = ["### Этапы", "\n".join(lines), "", "### Что сделано и сколько стоило",
@@ -255,8 +331,8 @@ def _process_md(pr) -> str:
            f"- Записей в реестре: {len(claims)}, действующих {len(act)}; цитат проверено по снимкам: {ver} из "
            f"{len(quoted)}.",
            "- Вызовы инструментов: " + (", ".join(f"{k} — {v}" for k, v in tools.most_common(10)) or "журнал пуст") + ".",
-           f"- Сбоев инструментов: {len(errors)}" + (": " + "; ".join(short(r.get('error') or r.get('text'), 60)
-                                                                     for r in errors[:5]) if errors else "") + ".",
+           f"- Сбоев инструментов: {len(errors)}" + (" (подробно: ./strat log). " + "; ".join(
+               _failure_line(r) for r in errors[:5]) if errors else "") + ".",
            f"- Сообщений руководителя: {prompts}; вопросов агента руководителю: {len(asked)}, "
            f"с ответом: {sum(1 for h in asked if h.get('answer'))}.",
            f"- Стоимость по тарифам API: ${calc:.2f} (подробно: ./strat cost).",
@@ -279,13 +355,35 @@ def build(pr) -> tuple:
     html_parts = []
     toc = []
     n = 0
-    for rel, name in SECTIONS:
+    sections = list(SECTIONS)
+    dl = pr.dir / "deliverable.md"
+    if dl.exists():
+        # документ в структуре заказчика идёт первым, каждая его часть — отдельный раздел оглавления;
+        # рабочие документы этапов — после него, как обоснование
+        t = strip_comments(dl.read_text(encoding="utf-8", errors="replace"))
+        t = re.sub(r"^#\s+.*\n", "", t.lstrip(), count=1)
+        for block in re.split(r"(?m)^(?=##\s)", t):
+            m = re.match(r"##\s+(.+)\n", block)
+            if not m:
+                continue
+            body = polish(drop_empty_sections(block[m.end():]))
+            if not body.strip():
+                continue
+            n += 1
+            name = m.group(1).strip()
+            toc.append((f"sec{n}", name))
+            md_parts += [f"## {name}", "", body.strip(), ""]
+            html_parts.append(f'<section><h2 id="sec{n}">{html.escape(name)}</h2>' +
+                              md_to_html(body, render_ref, shift=1) + "</section>")
+        sections = [(rel, "Рабочие материалы: " + name[0].lower() + name[1:]) for rel, name in SECTIONS
+                    if rel != "summary.md"]
+    for rel, name in sections:
         p = pr.dir / rel
         if not p.exists():
             continue
         text = strip_comments(p.read_text(encoding="utf-8", errors="replace"))
         text = re.sub(r"^#\s+.*\n", "", text.lstrip(), count=1)
-        text = drop_empty_sections(text)
+        text = polish(drop_empty_sections(text))
         if not text.strip():
             continue
         n += 1
@@ -300,7 +398,7 @@ def build(pr) -> tuple:
         toc.append(("decisions", "Решения и обязательства"))
         body = []
         for f in dec_files:
-            t = strip_comments(f.read_text(encoding="utf-8", errors="replace"))
+            t = polish(strip_comments(f.read_text(encoding="utf-8", errors="replace")))
             body.append(f'<div id="{f.stem.lower()}">' + md_to_html(t, render_ref, shift=2) + "</div>")
             md_parts += [t, ""]
         commits = pr.commitments()
@@ -314,7 +412,7 @@ def build(pr) -> tuple:
     rev = pr.dir / "revisions.md"
     if rev.exists() and strip_comments(rev.read_text(encoding="utf-8")).strip():
         t = strip_comments(rev.read_text(encoding="utf-8"))
-        t = re.sub(r"^#\s+.*\n", "", t.lstrip(), count=1)
+        t = polish(re.sub(r"^#\s+.*\n", "", t.lstrip(), count=1))
         toc.append(("revisions", "Пересмотры"))
         html_parts.append('<section><h2 id="revisions">Пересмотры</h2>' + md_to_html(t, render_ref, shift=1) + "</section>")
         md_parts += ["## Пересмотры", "", t, ""]
@@ -333,10 +431,10 @@ def build(pr) -> tuple:
         mark = "" if c["id"] in used else ' class="small"'
         quote = (c.get("quote") or "") + (f" ({c['loc']})" if c.get("loc") else "")
         rows.append(f'<tr id="{c["id"]}"{mark}><td>{c["id"]}</td><td class="t-{c["type"]}">'
-                    f'{TYPES.get(c["type"], c["type"])}</td><td>{html.escape(c.get("text", ""))}</td><td>{src}</td>'
+                    f'{TYPES.get(c["type"], c["type"])}</td><td>{html.escape(_decimal_comma(c.get("text", "")))}</td><td>{src}</td>'
                     f'<td>{html.escape(short(quote, 400))}</td><td>{ver}</td>'
                     f'<td>{STATUSES.get(c.get("status"), c.get("status"))}</td></tr>')
-        md_rows.append(f"| {c['id']} | {TYPES.get(c['type'], c['type'])} | {c.get('text', '').replace('|', '/')} | "
+        md_rows.append(f"| {c['id']} | {TYPES.get(c['type'], c['type'])} | {_decimal_comma(c.get('text', '')).replace('|', '/')} | "
                        f"{', '.join(c.get('sources', []) or c.get('basis', []))} | "
                        f"{short(quote, 200).replace('|', '/')} | {ver} | {STATUSES.get(c.get('status'))} |")
     srows, md_src = [], ["| ID | Источник | Где | Дата | Надёжность |", "|---|---|---|---|---|"]
@@ -348,9 +446,9 @@ def build(pr) -> tuple:
         srows.append(f'<tr id="{s["id"]}"><td>{s["id"]}</td><td>{html.escape(s.get("title", ""))}{flags}</td>'
                      f'<td>{link}</td><td>{html.escape(s.get("published") or "")} '
                      f'<span class="small">получен {fmt_dt(s.get("retrieved_at"))}</span></td>'
-                     f'<td>{s.get("reliability", "?")}</td></tr>')
+                     f'<td>{_rel(s)}</td></tr>')
         md_src.append(f"| {s['id']} | {s.get('title', '').replace('|', '/')} | {where} | {s.get('published', '')} | "
-                      f"{s.get('reliability', '?')} |")
+                      f"{_rel(s)} |")
     proc = _process_md(pr)
     toc += [("claims", "Приложение А. Реестр утверждений"), ("sources", "Приложение Б. Источники"),
             ("process", "Приложение В. Как получен результат")]

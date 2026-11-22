@@ -33,7 +33,7 @@ TOOLS = [
      "утверждения, стоимость. Вызывайте в начале работы и после перерыва.", {}, [],
      lambda a: ["status"]),
     ("strat_init", "Создать проект под новую задачу руководителя продукта и сделать его активным.",
-     {"title": S, "workflow": {"type": "string", "enum": ["full", "quick", "comms", "diagnostic", "revisit"]}},
+     {"title": S, "workflow": {"type": "string", "enum": ["full", "quick", "comms", "diagnostic", "revisit", "brief"]}},
      ["title"], lambda a: ["init", a["title"]] + _opt(a, "workflow", "--workflow")),
     ("strat_stage", "Начать, закрыть или переоткрыть этап. Закрытие проверяет документы этапа.",
      {"name": {"type": "string", "enum": ["frame", "collect", "research", "options", "strategy", "report", "decide",
@@ -97,6 +97,11 @@ TOOLS = [
      lambda a: ["decision", "check"]),
     ("strat_cost", "Стоимость и время по этапам и моделям.", {}, [], lambda a: ["cost"]),
     ("strat_report", "Собрать итоговый отчёт report.html и report.md.", {}, [], lambda a: ["report"]),
+    ("strat_model_sync", "Занести финансовую модель (analysis/model.json) в реестр: допущения и оценки с основаниями.",
+     {}, [], lambda a: ["model", "sync"]),
+    ("strat_deliverable_set", "Задать части итогового документа в структуре заказчика (через «|»).",
+     {"parts": S, "lead": S, "source": S}, ["parts"],
+     lambda a: ["deliverable", "set", "--parts", a["parts"]] + _opt(a, "lead", "--lead") + _opt(a, "source", "--source")),
 ]
 
 

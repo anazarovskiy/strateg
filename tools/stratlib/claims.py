@@ -340,8 +340,9 @@ def cmd_update(args):
             if s not in smap:
                 raise StratError(f"Источник {s} не найден.")
         changes["_add_sources"] = new
-    if not changes:
-        raise StratError("Нечего менять: укажите --text, --quote, --loc, --tags, --add-source ...")
+    if not changes and not args.note:
+        raise StratError("Нечего менять: укажите --text, --quote, --loc, --confidence, --tags, --add-source или "
+                         "--note (пометка без правки, например «ослаблена данными C-081»)")
 
     result = {}
 
@@ -352,7 +353,7 @@ def cmd_update(args):
                 c["sources"] = sorted(set(c.get("sources", []) + v))
             else:
                 c[k] = v
-        c.setdefault("history", []).append({"ts": now_iso(), "action": "update", "old": old,
+        c.setdefault("history", []).append({"ts": now_iso(), "action": "update" if old else "note", "old": old,
                                             "note": args.note or ""})
         res = _verify_against(pr, c, smap)
         c["verified"] = _verified_flag(res) if c.get("quote") else None
