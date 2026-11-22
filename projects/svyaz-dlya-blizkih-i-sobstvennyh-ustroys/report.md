@@ -1270,15 +1270,15 @@
 | исследование | 22.11 20:25 | 22.11 20:31 | 6 мин |
 | варианты | 22.11 20:31 | 22.11 20:36 | 4 мин |
 | стратегия | 22.11 20:36 | 22.11 20:38 | 1 мин |
-| отчёт | 22.11 20:40 | в работе | — |
+| отчёт | 22.11 20:40 | 22.11 21:15 | 35 мин |
 
 ### Что сделано и сколько стоило
 - Источников: 16 (надёжность: A — 7, B — 1, C — 3, расчёт — 5).
 - Записей в реестре: 231, действующих 229; цитат проверено по снимкам: 218 из 222.
-- Вызовы инструментов: команды strat и оболочки — 164, правка файлов — 23, чтение файлов — 19, создание файлов — 13, веб-поиск — 13, загрузка страниц — 5, субагенты — 3, вопросы руководителю — 2.
-- Сбоев инструментов: 16 (подробно: ./strat log). https://moskva.mts.ru/personal/mobilnaya-svyaz/tarifi/vse-t… — HTTP 401; ./strat source fetch "https://moskva.mts.ru/personal/mobiln… — moskva.mts.ru/personal/mobilnaya-svyaz/tarifi/vse-tarifi/semya --title ... --text-file ...; https://www.acma.gov.au/publications/2015-09/report/spend-m… — The read operation timed out; ./strat source fetch https://www.acma.gov.au/publications/2… — код выхода 4; https://www.ofcom.org.uk/__data/assets/pdf_file/0018/281232… — HTTP 403.
-- Сообщений руководителя: 6; вопросов агента руководителю: 2, с ответом: 2.
-- Стоимость по тарифам API: $5.26 (подробно: ./strat cost).
+- Вызовы инструментов: команды strat и оболочки — 167, правка файлов — 23, чтение файлов — 19, создание файлов — 13, веб-поиск — 13, загрузка страниц — 5, субагенты — 3, вопросы руководителю — 2.
+- Сбоев инструментов: 17 (подробно: ./strat log). https://moskva.mts.ru/personal/mobilnaya-svyaz/tarifi/vse-t… — HTTP 401; ./strat source fetch "https://moskva.mts.ru/personal/mobiln… — moskva.mts.ru/personal/mobilnaya-svyaz/tarifi/vse-tarifi/semya --title ... --text-file ...; https://www.acma.gov.au/publications/2015-09/report/spend-m… — The read operation timed out; ./strat source fetch https://www.acma.gov.au/publications/2… — код выхода 4; https://www.ofcom.org.uk/__data/assets/pdf_file/0018/281232… — HTTP 403.
+- Сообщений руководителя: 7; вопросов агента руководителю: 2, с ответом: 2.
+- Стоимость по тарифам API: $5.59 (подробно: ./strat cost).
 - Проверка документов: ошибок 0, предупреждений 0.
 
 ### Решения, которые принимал человек

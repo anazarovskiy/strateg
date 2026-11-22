@@ -392,3 +392,6 @@
 {"ts": "2026-11-22T21:15:53+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat stage report done"}
 {"ts": "2026-11-22T21:15:55+03:00", "actor": "agent", "kind": "next", "text": "Решение пока не фиксируем (по указанию руководителя). Открыто: снять ссылки на S-002 с 21 записи — в ./strat нет команды удаления источника"}
 {"ts": "2026-11-22T21:15:55+03:00", "actor": "agent", "kind": "tool", "tool": "Bash", "command": "./strat next \"Решение пока не фиксируем (по указанию руководителя). Открыто: снять ссылки на S-002 с 21 записи — в ./strat нет команды удаления источника\""}
+{"ts": "2026-11-22T21:22:31+03:00", "actor": "user", "kind": "user_prompt", "text": "git push -u origin main"}
+{"ts": "2026-11-22T21:22:37+03:00", "actor": "agent", "kind": "tool_failure", "tool": "Bash", "command": "git push -u origin main", "error": "Exit code 128 fatal: could not read Username for 'https://github.com': Device not configured"}
+{"ts": "2026-11-22T21:31:44+03:00", "actor": "agent", "kind": "report", "files": ["report.md", "report.html"]}
